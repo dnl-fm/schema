@@ -19,7 +19,8 @@ export const TableSidebar = (props: TableSidebarProps) => {
     <div class={`w-16 h-full flex flex-col ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-100 border-gray-200'} border-r`}>
       {/* Database icon at top */}
       <div class={`p-2 flex justify-center border-b ${props.theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-        <button 
+        <button
+          type="button"
           onClick={props.onConnect}
           class={`p-2 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-200'}`}
           title="Connect to Database"
@@ -32,6 +33,7 @@ export const TableSidebar = (props: TableSidebarProps) => {
       <div class="flex-1 flex flex-col items-center py-4 space-y-4">
         {/* Tables toggle button */}
         <button
+          type="button"
           onClick={props.onToggleTables}
           class={`p-2 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-200'} ${props.tablesVisible ? (props.theme === 'dark' ? 'bg-gray-900' : 'bg-gray-200') : ''}`}
           title="Tables"
@@ -43,6 +45,7 @@ export const TableSidebar = (props: TableSidebarProps) => {
       {/* Bottom buttons */}
       <div class={`p-2 flex flex-col items-center gap-2 border-t ${props.theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
         <button
+          type="button"
           onClick={props.onReload}
           disabled={!props.isConnected || props.isLoading}
           class={`p-2 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-200'} ${!props.isConnected || props.isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -51,6 +54,7 @@ export const TableSidebar = (props: TableSidebarProps) => {
           <span class="material-icons text-2xl">refresh</span>
         </button>
         <button
+          type="button"
           onClick={props.onToggleSettings}
           class={`p-2 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-200'}`}
           title="Settings"

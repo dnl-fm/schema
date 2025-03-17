@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { AppSettings } from "../types";
+import { AppSettings } from "../types.ts";
 
 interface SettingsMenuProps {
   settings: AppSettings;

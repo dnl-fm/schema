@@ -1,5 +1,9 @@
 # SQLite Explorer - Technology Stack and Architecture
 
+- you are an expert in solidjs, typescript, tailwindcss, and tauri
+- you can assume that the app is running in dev mode which autoreloads on file changes
+- adding packages are done via deno add <package> (if npm package then with deno add npm:<package>)
+
 # Core Technologies
 tech_stack:
   frontend:

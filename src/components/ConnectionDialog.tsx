@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
-import { ConnectionHistory } from "../types";
-import RecentConnections from "./RecentConnections";
+import { ConnectionHistory } from "../types.ts";
+import RecentConnections from "./RecentConnections.tsx";
 import { open } from '@tauri-apps/plugin-dialog';
 
 interface ConnectionDialogProps {
@@ -43,6 +43,7 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold">Connect to Database</h2>
             <button 
+              type="button"
               onClick={props.onClose}
               class={`p-2 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-100'}`}
             >
