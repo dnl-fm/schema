@@ -9,6 +9,7 @@ import QueryEditor from "./components/QueryEditor.tsx";
 import ResultsTable from "./components/ResultsTable.tsx";
 import RowDetailSidebar from "./components/RowDetailSidebar.tsx";
 import SettingsMenu from "./components/SettingsMenu.tsx";
+import HelpDialog from "./components/HelpDialog.tsx";
 import { themeColors } from "./utils/theme.ts";
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
   });
   const [showSettings, setShowSettings] = createSignal(false);
   const [showConnectionDialog, setShowConnectionDialog] = createSignal(false);
+  const [showHelpDialog, setShowHelpDialog] = createSignal(false);
   const [tablesVisible, setTablesVisible] = createSignal(true);
   
   // Row detail sidebar state
@@ -75,6 +77,13 @@ function App() {
   
   // Handle global keyboard shortcuts
   function handleGlobalKeyDown(e: KeyboardEvent) {
+    // Global shortcut: Ctrl+H to show help dialog
+    if (e.ctrlKey && e.key === 'h') {
+      e.preventDefault();
+      setShowHelpDialog(true);
+      return;
+    }
+    
     // Global shortcut: Ctrl+Q to focus query editor
     if (e.ctrlKey && e.key === 'q') {
       e.preventDefault();
@@ -98,6 +107,13 @@ function App() {
     
     // Handle ESC key for dialogs
     if (e.key === 'Escape') {
+      // Close help dialog if open
+      if (showHelpDialog()) {
+        e.preventDefault();
+        setShowHelpDialog(false);
+        return;
+      }
+      
       // Close settings dialog if open
       if (showSettings()) {
         e.preventDefault();
@@ -675,6 +691,13 @@ function App() {
         onSave={saveSetting}
         onClose={() => setShowSettings(false)}
         isOpen={showSettings()}
+      />
+      
+      {/* Help Dialog */}
+      <HelpDialog
+        isOpen={showHelpDialog()}
+        onClose={() => setShowHelpDialog(false)}
+        theme={settings().theme}
       />
     </div>
   );
