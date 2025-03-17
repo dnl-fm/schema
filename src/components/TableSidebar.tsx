@@ -29,7 +29,7 @@ export const TableSidebar = (props: TableSidebarProps) => {
           class={`p-2 rounded-full ${themeColors[props.theme as ThemeMode].hover}`}
           title="Connect to Database"
         >
-          <span class="material-icons text-2xl">storage</span>
+          <span class="material-icons text-2xl">lan</span>
         </button>
       </div>
       
