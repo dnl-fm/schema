@@ -51,6 +51,11 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown);
       window.removeEventListener('focusin', handleFocusChange);
     });
+
+    // Make focusQueryEditor available globally
+    if (typeof window !== 'undefined') {
+      (window as any).focusQueryEditor = focusQueryEditor;
+    }
   });
   
   // Handle focus changes to track active element
@@ -61,6 +66,8 @@ function App() {
       setActiveElement('query-editor');
     } else if (target.closest('.results-table') || target.classList.contains('results-table')) {
       setActiveElement('results-table');
+    } else if (target.closest('.tables-list') || target.classList.contains('tables-list')) {
+      setActiveElement('tables-list');
     } else {
       setActiveElement(null);
     }
@@ -79,6 +86,13 @@ function App() {
     if (e.ctrlKey && e.key === 'r') {
       e.preventDefault();
       focusResultsTable();
+      return;
+    }
+    
+    // Global shortcut: Ctrl+T to focus tables list
+    if (e.ctrlKey && e.key === 't') {
+      e.preventDefault();
+      focusTablesList();
       return;
     }
     
@@ -209,6 +223,37 @@ function App() {
         setSelectedRow(results.rows[0]);
         setSelectedRowIndex(0);
       }
+    }
+  }
+
+  // Focus the tables list
+  function focusTablesList() {
+    // Only focus if there are tables and the list is visible
+    if (!tables().length || !tablesVisible()) return;
+    
+    // Try to use the exposed tables list container reference first
+    if (typeof window !== 'undefined' && (window as any).tablesListContainer) {
+      const tablesContainer = (window as any).tablesListContainer;
+      // Ensure the element is focusable
+      if (tablesContainer.getAttribute('tabindex') === null) {
+        tablesContainer.setAttribute('tabindex', '0');
+      }
+      tablesContainer.focus();
+      setActiveElement('tables-list');
+      return;
+    }
+    
+    // Fallback to querySelector if the reference is not available
+    const tablesList = document.querySelector('.tables-list') as HTMLElement;
+    if (tablesList) {
+      // Ensure the element is focusable
+      if (tablesList.getAttribute('tabindex') === null) {
+        tablesList.setAttribute('tabindex', '0');
+      }
+      
+      // Focus the element
+      tablesList.focus();
+      setActiveElement('tables-list');
     }
   }
 
@@ -431,9 +476,13 @@ function App() {
   }
 
   // Handle table selection
-  function handleTableSelect(table: string) {
+  function handleTableSelect(table: string, triggerQueryExecution: boolean = true) {
     setSelectedTable(table);
-    executeQuery(`SELECT * FROM ${table} LIMIT 100`);
+    
+    // Only execute the query if explicitly requested
+    if (triggerQueryExecution) {
+      executeQuery(`SELECT * FROM ${table} LIMIT 100`);
+    }
   }
   
   // Handle row selection
