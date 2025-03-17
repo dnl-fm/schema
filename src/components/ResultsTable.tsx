@@ -33,19 +33,38 @@ export const ResultsTable = (props: ResultsTableProps) => {
     }
   });
 
+  // Get the appropriate data to export/copy based on the sidebar state
+  const getDataToUse = () => {
+    if (!props.results) return null;
+    
+    // If detail sidebar is open and a row is selected, only use that row
+    if (props.detailSidebarOpen && props.selectedRowIndex !== null) {
+      return [props.results.rows[props.selectedRowIndex]];
+    }
+    
+    // Otherwise use all rows
+    return props.results.rows;
+  };
+
   // Handle export action
   const handleExport = () => {
     if (!props.results) return;
     
     try {
-      const { columns, rows } = props.results;
+      const rowsToExport = getDataToUse();
+      if (!rowsToExport) return;
+      
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       
       // Default to JSON format
-      const jsonData = resultsToJson(rows);
+      const jsonData = resultsToJson(rowsToExport);
       downloadFile(jsonData, `query-results-${timestamp}.json`, 'application/json');
       
-      setActionMessage({ text: `Results exported as JSON`, type: 'success' });
+      const message = props.detailSidebarOpen && props.selectedRowIndex !== null
+        ? 'Selected row exported as JSON'
+        : 'Results exported as JSON';
+      
+      setActionMessage({ text: message, type: 'success' });
       setTimeout(() => setActionMessage(null), 3000);
     } catch (err) {
       console.error('Export error:', err);
@@ -59,18 +78,41 @@ export const ResultsTable = (props: ResultsTableProps) => {
     if (!props.results) return;
     
     try {
-      const { rows } = props.results;
+      const rowsToCopy = getDataToUse();
+      if (!rowsToCopy) return;
       
       // Default to JSON format
-      const jsonData = resultsToJson(rows);
+      const jsonData = resultsToJson(rowsToCopy);
       await copyToClipboard(jsonData);
       
-      setActionMessage({ text: `Results copied as JSON`, type: 'success' });
+      const message = props.detailSidebarOpen && props.selectedRowIndex !== null
+        ? 'Selected row copied as JSON'
+        : 'Results copied as JSON';
+      
+      setActionMessage({ text: message, type: 'success' });
       setTimeout(() => setActionMessage(null), 3000);
     } catch (err) {
       console.error('Copy error:', err);
       setActionMessage({ text: `Copy failed: ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
       setTimeout(() => setActionMessage(null), 3000);
+    }
+  };
+  
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Only handle shortcuts when focused
+    if (!isFocused()) return;
+    
+    // Ctrl+C to copy
+    if (e.ctrlKey && e.key === 'c') {
+      e.preventDefault();
+      handleCopy();
+    }
+    
+    // Ctrl+S to export/save
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      handleExport();
     }
   };
   
@@ -81,6 +123,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
       tabIndex={0}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
+      onKeyDown={handleKeyDown}
     >
       <div class="overflow-x-auto flex-1">
         <Show when={props.results} fallback={<div class={`p-4 ${props.theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>No results to display</div>}>
@@ -154,7 +197,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
               type="button"
               onClick={handleExport}
               class={`flex items-center text-sm px-3 py-1 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-200 hover:bg-gray-300'} rounded`}
-              title="Export results as JSON"
+              title="Export results as JSON (Ctrl+S)"
             >
               <span class="material-icons text-sm mr-1">download</span>
             </button>
@@ -164,7 +207,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
               type="button"
               onClick={handleCopy}
               class={`flex items-center text-sm px-3 py-1 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-200 hover:bg-gray-300'} rounded`}
-              title="Copy results as JSON"
+              title="Copy results as JSON (Ctrl+C)"
             >
               <span class="material-icons text-sm mr-1">content_copy</span>
             </button>
