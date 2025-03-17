@@ -1,3 +1,5 @@
+import { ThemeMode } from './types/theme.ts';
+
 export interface TableRow {
   name: string;
   [key: string]: unknown;
@@ -17,5 +19,5 @@ export interface ConnectionHistory {
 export interface AppSettings {
   fontSize: string;
   fontFamily: string;
-  theme: 'light' | 'dark';
+  theme: ThemeMode;
 } 

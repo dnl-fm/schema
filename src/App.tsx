@@ -1,6 +1,7 @@
-import { createSignal, Show, createEffect, onMount, onCleanup } from "solid-js";
+import { createSignal, Show, createEffect, onMount, onCleanup, For } from "solid-js";
 import Database from "@tauri-apps/plugin-sql";
 import { TableRow, QueryResult, ConnectionHistory, AppSettings } from "./types.ts";
+import { ThemeMode } from "./types/theme.ts";
 import TableSidebar from "./components/TableSidebar.tsx";
 import TablesList from "./components/TablesList.tsx";
 import ConnectionDialog from "./components/ConnectionDialog.tsx";
@@ -8,6 +9,7 @@ import QueryEditor from "./components/QueryEditor.tsx";
 import ResultsTable from "./components/ResultsTable.tsx";
 import RowDetailSidebar from "./components/RowDetailSidebar.tsx";
 import SettingsMenu from "./components/SettingsMenu.tsx";
+import { themeColors } from "./utils/theme.ts";
 
 function App() {
   const [dbPath, setDbPath] = createSignal("/home/fightbulc/Buildspace/code/ato/subs/data/dump.sqlite");
@@ -439,9 +441,17 @@ function App() {
     const results = queryResults();
     if (!results) return;
     
-    const index = results.rows.findIndex(r => r === row);
-    setSelectedRow(row);
-    setSelectedRowIndex(index);
+    // Find the index of the selected row
+    const index = results.rows.findIndex(r => {
+      // Compare objects by reference
+      return r === row;
+    });
+    
+    // Only update if the row is actually found
+    if (index !== -1) {
+      setSelectedRow(row);
+      setSelectedRowIndex(index);
+    }
   }
   
   // Toggle detail sidebar
@@ -459,9 +469,17 @@ function App() {
     setShowConnectionDialog(!showConnectionDialog());
   }
 
+  // Get scrollbar style class based on theme
+  const getScrollbarClass = () => {
+    if (settings().theme === 'tokyo') {
+      return 'tokyo-scrollbar';
+    }
+    return '';
+  };
+
   return (
     <div 
-      class={`flex flex-col h-screen ${settings().theme === 'dark' ? 'bg-black text-gray-100' : 'bg-white text-gray-900'}`}
+      class={`flex flex-col h-screen ${themeColors[settings().theme].background} ${themeColors[settings().theme].text} ${getScrollbarClass()}`}
       style={{
         "font-family": settings().fontFamily,
         "font-size": `${settings().fontSize}px`
@@ -505,35 +523,34 @@ function App() {
         {/* Main content */}
         <Show when={connected()} fallback={
           <div class="flex-1 flex items-center justify-center p-4">
-            <div class={`text-center p-6 w-full max-w-2xl ${settings().theme === 'dark' ? 'bg-black text-white border border-gray-800' : 'bg-white'} rounded-lg shadow-lg`}>
+            <div class={`text-center p-6 w-full max-w-2xl ${themeColors[settings().theme].background} ${themeColors[settings().theme].text} border ${themeColors[settings().theme].border} rounded-lg shadow-lg`}>
               <h2 class="text-2xl font-bold mb-4">Welcome to SQLite Explorer</h2>
-              <p class={`${settings().theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-6`}>Click the database icon to connect to a SQLite database</p>
+              <p class={`${themeColors[settings().theme].subText} mb-6`}>Click the database icon to connect to a SQLite database</p>
               
               {/* Recent connections */}
               <Show when={recentConnections().length > 0}>
                 <div class="mt-8">
                   <h3 class="text-lg font-medium mb-3">Recent Connections</h3>
-                  <div class={`border ${settings().theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} rounded-md overflow-hidden w-full`}>
-                    <ul class={`divide-y ${settings().theme === 'dark' ? 'divide-gray-800' : 'divide-gray-200'}`}>
+                  <div class={`border ${themeColors[settings().theme].border} rounded-md overflow-hidden w-full`}>
+                    <ul class={`divide-y ${themeColors[settings().theme].divider}`}>
                       <For each={recentConnections()}>
-                        {(connection) => (
+                        {(connection: ConnectionHistory) => (
                           <li>
                             <button
                               onClick={() => {
                                 setDbPath(connection.path);
                                 connectToDatabase();
                               }}
-                              class={`w-full text-left px-4 py-3 ${settings().theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-50'} flex items-center`}
+                              class={`w-full text-left px-4 py-3 ${themeColors[settings().theme].hover} flex items-center`}
                             >
                               <div class="flex-1">
-                                <div class={`font-medium ${settings().theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                                <div class={`font-medium ${themeColors[settings().theme].headerText}`}>
                                   {connection.path.split('/').pop()}
                                 </div>
-                                <div class={`text-sm ${settings().theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} break-all`}>
+                                <div class={`text-sm ${themeColors[settings().theme].subText} break-all`}>
                                   {connection.path}
                                 </div>
                               </div>
-                              <span class="material-icons text-gray-400 ml-2 flex-shrink-0">chevron_right</span>
                             </button>
                           </li>
                         )}

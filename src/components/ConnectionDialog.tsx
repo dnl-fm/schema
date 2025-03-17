@@ -2,6 +2,8 @@ import { Show } from "solid-js";
 import { ConnectionHistory } from "../types.ts";
 import RecentConnections from "./RecentConnections.tsx";
 import { open } from '@tauri-apps/plugin-dialog';
+import { themeColors } from "../utils/theme.ts";
+import { ThemeMode } from "../types/theme.ts";
 
 interface ConnectionDialogProps {
   dbPath: string;
@@ -9,7 +11,7 @@ interface ConnectionDialogProps {
   onConnect: () => void;
   isLoading: boolean;
   isConnected: boolean;
-  theme: 'light' | 'dark';
+  theme: ThemeMode;
   recentConnections: ConnectionHistory[];
   onSelectRecent: (path: string) => void;
   isOpen: boolean;
@@ -36,16 +38,22 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
     }
   };
 
+  // Get button color based on theme
+  const getConnectButtonClasses = () => {
+    // Common button styles for all themes
+    return `w-full px-4 py-2 text-white rounded disabled:opacity-50 ${themeColors[props.theme].primaryButtonBg} ${themeColors[props.theme].primaryButtonHover}`;
+  };
+
   return (
     <Show when={props.isOpen}>
       <div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-        <div class={`${props.theme === 'dark' ? 'bg-black text-white border border-gray-800' : 'bg-white'} rounded-lg shadow-xl p-8 w-[640px] max-h-[90vh] overflow-y-auto`}>
+        <div class={`${themeColors[props.theme].background} ${themeColors[props.theme].text} border ${themeColors[props.theme].border} rounded-lg shadow-xl p-8 w-[640px] max-h-[90vh] overflow-y-auto`}>
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold">Connect to Database</h2>
             <button 
               type="button"
               onClick={props.onClose}
-              class={`p-2 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-100'}`}
+              class={`p-2 rounded-full ${themeColors[props.theme].hover}`}
             >
               <span class="material-icons">close</span>
             </button>
@@ -53,7 +61,7 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
           
           <div class="space-y-6">
             <div>
-              <label class={`block text-base font-medium ${props.theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+              <label class={`block text-base font-medium ${themeColors[props.theme].headerText} mb-2`}>
                 Database Path
               </label>
               <div class="flex gap-2">
@@ -62,11 +70,11 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
                   value={props.dbPath}
                   onChange={(e) => props.onDbPathChange(e.currentTarget.value)}
                   placeholder="Enter SQLite database path..."
-                  class={`flex-1 px-3 py-2 rounded ${props.theme === 'dark' ? 'bg-black text-white border border-gray-800 placeholder-gray-500' : 'bg-white text-black border border-gray-300'}`}
+                  class={`flex-1 px-3 py-2 rounded ${themeColors[props.theme].inputBg} ${themeColors[props.theme].text} border ${themeColors[props.theme].border} placeholder-gray-500`}
                 />
                 <button
                   onClick={handleFileSelect}
-                  class={`px-3 py-2 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-100 hover:bg-gray-200 border border-gray-300'} rounded flex items-center`}
+                  class={`px-3 py-2 ${themeColors[props.theme].buttonBg} ${themeColors[props.theme].buttonHover} border ${themeColors[props.theme].border} rounded flex items-center`}
                   title="Browse for database file"
                 >
                   <span class="material-icons">folder_open</span>
@@ -77,7 +85,7 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
             <button 
               onClick={props.onConnect} 
               disabled={props.isLoading}
-              class={`w-full px-4 py-2 ${props.theme === 'dark' ? 'bg-blue-800 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded disabled:opacity-50`}
+              class={getConnectButtonClasses()}
             >
               {props.isLoading ? "Connecting..." : props.isConnected ? "Reconnect" : "Connect"}
             </button>

@@ -1,10 +1,12 @@
 import { createSignal, createEffect, onMount } from "solid-js";
+import { themeColors } from "../utils/theme.ts";
+import { ThemeMode } from "../types/theme.ts";
 
 interface QueryEditorProps {
   onExecuteQuery: (query: string) => void;
   isLoading: boolean;
   selectedTable: string;
-  theme: 'light' | 'dark';
+  theme: ThemeMode;
   fontSize: string;
   fontFamily: string;
 }
@@ -41,15 +43,21 @@ export const QueryEditor = (props: QueryEditorProps) => {
     }
   });
 
+  // Get button color based on theme
+  const getRunButtonClasses = () => {
+    // Common button styles for all themes
+    return `px-3 py-1 text-white rounded disabled:opacity-50 ${themeColors[props.theme].primaryButtonBg} ${themeColors[props.theme].primaryButtonHover}`;
+  };
+
   return (
-    <div class={`query-editor flex flex-col h-64 border ${isFocused() ? (props.theme === 'dark' ? 'border-blue-500 ring-2 ring-blue-500' : 'border-blue-400 ring-2 ring-blue-400') : (props.theme === 'dark' ? 'border-gray-800' : 'border-gray-300')} rounded-md`}>
-      <div class={`flex justify-between items-center px-4 py-2 ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-100 border-gray-300'} border-b`}>
+    <div class={`query-editor flex flex-col h-64 border ${isFocused() ? `border-blue-500 ring-2 ${themeColors[props.theme].focusRing}` : themeColors[props.theme].border} rounded-md`}>
+      <div class={`flex justify-between items-center px-4 py-2 ${themeColors[props.theme].tableHead} border-b ${themeColors[props.theme].border}`}>
         <h3 class="font-medium">SQL Query</h3>
         <div class="flex items-center">
           <button 
             onClick={() => props.onExecuteQuery(query())}
             disabled={props.isLoading}
-            class="px-3 py-1 bg-blue-800 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            class={getRunButtonClasses()}
           >
             {props.isLoading ? "Running..." : "Run"}
           </button>
@@ -62,7 +70,7 @@ export const QueryEditor = (props: QueryEditorProps) => {
         onKeyDown={handleKeyDown}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        class={`flex-1 p-4 resize-none focus:outline-none ${props.theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}
+        class={`flex-1 p-4 resize-none focus:outline-none ${themeColors[props.theme].inputBg} ${themeColors[props.theme].text}`}
         style={{
           "font-family": props.fontFamily,
           "font-size": `${props.fontSize}px`

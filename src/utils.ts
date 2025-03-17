@@ -1,3 +1,6 @@
+import { ThemeMode, SyntaxHighlightColors } from './types/theme.ts';
+import { getSyntaxColor } from './utils/theme.ts';
+
 // Helper function to check if a value is JSON or JSON-like string
 export function isJsonLike(value: unknown): boolean {
   if (value === null || value === undefined) return false;
@@ -64,23 +67,35 @@ export function isJsonString(value: unknown): boolean {
 }
 
 // Syntax highlight JSON
-export function syntaxHighlightJson(json: string, theme: 'light' | 'dark'): string {
+export function syntaxHighlightJson(json: string, theme: ThemeMode): string {
+  // Get a class prefix for special themes
+  const getThemePrefix = (themeMode: ThemeMode, type: keyof SyntaxHighlightColors): string => {
+    if (themeMode === 'tokyo') {
+      return `tokyo-highlight-${type} `;
+    }
+    return '';
+  };
+
   // Replace with syntax highlighting
   return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, 
     function (match) {
-      let cls = theme === 'dark' ? 'text-purple-400' : 'text-purple-600'; // string (purple)
+      let type: keyof SyntaxHighlightColors = 'string';
       if (/^"/.test(match)) {
         if (/:$/.test(match)) {
-          cls = theme === 'dark' ? 'text-red-400' : 'text-red-600'; // key (red)
+          type = 'key';
         }
       } else if (/true|false/.test(match)) {
-        cls = theme === 'dark' ? 'text-blue-400' : 'text-blue-600'; // boolean (blue)
+        type = 'boolean';
       } else if (/null/.test(match)) {
-        cls = theme === 'dark' ? 'text-gray-400' : 'text-gray-600'; // null (gray)
+        type = 'null';
       } else {
-        cls = theme === 'dark' ? 'text-green-400' : 'text-green-600'; // number (green)
+        type = 'number';
       }
-      return `<span class="${cls}">${match}</span>`;
+      
+      const cls = getSyntaxColor(theme, type);
+      const prefix = getThemePrefix(theme, type);
+      
+      return `<span class="${prefix}${cls}">${match}</span>`;
     }
   );
 }

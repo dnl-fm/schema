@@ -7,6 +7,8 @@ import {
   copyToClipboard, 
   downloadFile 
 } from "../utils.ts";
+import { themeColors } from "../utils/theme.ts";
+import { ThemeMode } from "../types/theme.ts";
 
 interface ResultsTableProps {
   results: QueryResult | null;
@@ -14,7 +16,7 @@ interface ResultsTableProps {
   selectedRowIndex: number | null;
   onToggleDetailSidebar: () => void;
   detailSidebarOpen: boolean;
-  theme: 'light' | 'dark';
+  theme: ThemeMode;
   fontSize: string;
   fontFamily: string;
 }
@@ -119,38 +121,38 @@ export const ResultsTable = (props: ResultsTableProps) => {
   return (
     <div 
       ref={tableContainerRef}
-      class={`results-table border ${isFocused() ? (props.theme === 'dark' ? 'border-blue-500 ring-2 ring-blue-500' : 'border-blue-400 ring-2 ring-blue-400') : (props.theme === 'dark' ? 'border-gray-800' : 'border-gray-300')} rounded-md overflow-hidden mt-4 flex-1 flex flex-col`}
+      class={`results-table border ${isFocused() ? `border-blue-500 ring-2 ${themeColors[props.theme].focusRing}` : themeColors[props.theme].border} rounded-md overflow-hidden mt-4 flex-1 flex flex-col`}
       tabIndex={0}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
       onKeyDown={handleKeyDown}
     >
       <div class="overflow-x-auto flex-1">
-        <Show when={props.results} fallback={<div class={`p-4 ${props.theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>No results to display</div>}>
+        <Show when={props.results} fallback={<div class={`p-4 ${themeColors[props.theme].subText}`}>No results to display</div>}>
           {(results: Accessor<QueryResult>) => (
             <table 
-              class={`min-w-full divide-y ${props.theme === 'dark' ? 'divide-gray-800' : 'divide-gray-200'}`}
+              class={`min-w-full divide-y ${themeColors[props.theme].divider}`}
               style={{
                 "font-family": props.fontFamily,
                 "font-size": `${props.fontSize}px`
               }}
             >
-              <thead class={props.theme === 'dark' ? 'bg-black' : 'bg-gray-50'}>
+              <thead class={themeColors[props.theme].tableHead}>
                 <tr>
                   <For each={results().columns}>
                     {(column) => (
-                      <th class={`px-6 py-3 text-left font-medium ${props.theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>
+                      <th class={`px-6 py-3 text-left font-medium ${themeColors[props.theme].subText} uppercase tracking-wider`}>
                         {column}
                       </th>
                     )}
                   </For>
                 </tr>
               </thead>
-              <tbody class={`${props.theme === 'dark' ? 'bg-black' : 'bg-white'} divide-y ${props.theme === 'dark' ? 'divide-gray-800' : 'divide-gray-200'}`}>
+              <tbody class={`${themeColors[props.theme].tableRow} divide-y ${themeColors[props.theme].divider}`}>
                 <For each={results().rows}>
                   {(row, index) => (
                     <tr 
-                      class={`${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-50'} cursor-pointer ${props.selectedRowIndex === index() ? (props.theme === 'dark' ? 'bg-blue-800 ring-2 ring-blue-500' : 'bg-blue-50 ring-2 ring-blue-400') : ''}`}
+                      class={`${themeColors[props.theme].tableRowHover} cursor-pointer ${props.selectedRowIndex === index() ? `${themeColors[props.theme].tableRowSelected} ring-2 ${themeColors[props.theme].focusRing}` : ''}`}
                       onClick={() => {
                         props.onRowSelect(row);
                         setIsFocused(true);
@@ -164,7 +166,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
                           const value = row[column];
                           
                           return (
-                            <td class={`px-6 py-4 whitespace-nowrap ${props.theme === 'dark' ? 'text-gray-300' : 'text-gray-500'}`}>
+                            <td class={`px-6 py-4 whitespace-nowrap ${themeColors[props.theme].subText}`}>
                               {formatValueForDisplay(value)}
                             </td>
                           );
@@ -181,13 +183,13 @@ export const ResultsTable = (props: ResultsTableProps) => {
       
       {/* Action buttons at bottom */}
       <Show when={props.results && props.results.rows.length > 0}>
-        <div class={`flex items-center justify-between px-4 py-2 ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-50 border-gray-200'} border-t`}>
+        <div class={`flex items-center justify-between px-4 py-2 ${themeColors[props.theme].tableHead} border-t ${themeColors[props.theme].border}`}>
           <div class="flex items-center space-x-2">
             {/* Action buttons moved to the left */}
             <button
               type="button"
               onClick={props.onToggleDetailSidebar}
-              class={`flex items-center text-sm px-2 py-1 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-200 hover:bg-gray-300'} rounded`}
+              class={`flex items-center text-sm px-2 py-1 ${themeColors[props.theme].buttonBg} ${themeColors[props.theme].buttonHover} rounded`}
             >
               <span class="material-icons text-sm mr-1">{props.detailSidebarOpen ? 'visibility_off' : 'visibility'}</span>
             </button>
@@ -196,7 +198,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
             <button
               type="button"
               onClick={handleExport}
-              class={`flex items-center text-sm px-3 py-1 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-200 hover:bg-gray-300'} rounded`}
+              class={`flex items-center text-sm px-3 py-1 ${themeColors[props.theme].buttonBg} ${themeColors[props.theme].buttonHover} rounded`}
               title="Export results as JSON (Ctrl+S)"
             >
               <span class="material-icons text-sm mr-1">download</span>
@@ -206,7 +208,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
             <button
               type="button"
               onClick={handleCopy}
-              class={`flex items-center text-sm px-3 py-1 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-200 hover:bg-gray-300'} rounded`}
+              class={`flex items-center text-sm px-3 py-1 ${themeColors[props.theme].buttonBg} ${themeColors[props.theme].buttonHover} rounded`}
               title="Copy results as JSON (Ctrl+C)"
             >
               <span class="material-icons text-sm mr-1">content_copy</span>
@@ -224,8 +226,8 @@ export const ResultsTable = (props: ResultsTableProps) => {
               <div 
                 class={`px-3 py-1 rounded text-sm ${
                   actionMessage()?.type === 'success' 
-                    ? (props.theme === 'dark' ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800') 
-                    : (props.theme === 'dark' ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800')
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                 }`}
               >
                 {actionMessage()?.text}

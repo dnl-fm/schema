@@ -1,0 +1,47 @@
+/* Custom styles for SQLite Explorer */
+
+/* Tokyo theme scrollbars */
+.tokyo-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.tokyo-scrollbar::-webkit-scrollbar-track {
+  background: #0f172a; /* Matches slate-900 */
+}
+
+.tokyo-scrollbar::-webkit-scrollbar-thumb {
+  background: #4f46e5; /* Indigo color for thumb */
+  border-radius: 5px;
+}
+
+.tokyo-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6366f1; /* Lighter indigo on hover */
+}
+
+/* Apply scrollbar styling to main content areas in Tokyo theme */
+.tokyo-scrollbar .results-table::-webkit-scrollbar,
+.tokyo-scrollbar .flex-1.overflow-auto::-webkit-scrollbar,
+.tokyo-scrollbar textarea::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.tokyo-scrollbar .results-table::-webkit-scrollbar-track,
+.tokyo-scrollbar .flex-1.overflow-auto::-webkit-scrollbar-track,
+.tokyo-scrollbar textarea::-webkit-scrollbar-track {
+  background: #1e293b; /* slate-800 */
+}
+
+.tokyo-scrollbar .results-table::-webkit-scrollbar-thumb,
+.tokyo-scrollbar .flex-1.overflow-auto::-webkit-scrollbar-thumb,
+.tokyo-scrollbar textarea::-webkit-scrollbar-thumb {
+  background: #6366f1; /* Indigo for thumb */
+  border-radius: 4px;
+}
+
+.tokyo-scrollbar .results-table::-webkit-scrollbar-thumb:hover,
+.tokyo-scrollbar .flex-1.overflow-auto::-webkit-scrollbar-thumb:hover,
+.tokyo-scrollbar textarea::-webkit-scrollbar-thumb:hover {
+  background: #818cf8; /* Lighter indigo on hover */
+} 
