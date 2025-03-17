@@ -106,7 +106,33 @@ function App() {
     // Global shortcut: Ctrl+T to focus tables list
     if (e.ctrlKey && e.key === 't') {
       e.preventDefault();
-      focusTablesList();
+      
+      if (activeElement() === 'tables-list' && tablesVisible()) {
+        // If tables list is focused and visible, hide it
+        setTablesVisible(false);
+      } else {
+        // If tables list is hidden or not focused, show it and focus it
+        setTablesVisible(true);
+        
+        // We need to give enough time for the component to render
+        // and register its containerRef with globalThis
+        setTimeout(() => {
+          // Ensure the tables list is properly focused after becoming visible
+          const listElement = document.querySelector('.tables-list');
+          if (listElement) {
+            (listElement as HTMLElement).focus();
+            setActiveElement('tables-list');
+            
+            // Also manually trigger a focus update to highlight the selected item
+            if (typeof globalThis !== 'undefined') {
+              const updateEvent = new CustomEvent('update-focused-table', { 
+                detail: { selectedTable: selectedTable() }
+              });
+              globalThis.dispatchEvent(updateEvent);
+            }
+          }
+        }, 150); // Increased delay for DOM updates
+      }
       return;
     }
     
@@ -265,16 +291,49 @@ function App() {
 
   // Focus the tables list
   function focusTablesList() {
-    // Only focus if there are tables and the list is visible
-    if (!tables().length || !tablesVisible()) return;
+    // Check for tables but don't return early if the list isn't visible yet
+    // as we might be in the process of making it visible
+    if (!tables().length) return;
     
-    // Try to use the exposed tables list container reference first
-    if (typeof globalThis !== 'undefined') {
-      const tablesContainer = (globalThis as { tablesListContainer?: HTMLElement }).tablesListContainer;
-      if (tablesContainer) {
+    // Set a retry counter for cases where the DOM hasn't updated yet
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    const attemptFocus = () => {
+      // Try to use the exposed tables list container reference first
+      if (typeof globalThis !== 'undefined') {
+        const tablesContainer = (globalThis as { tablesListContainer?: HTMLElement }).tablesListContainer;
+        if (tablesContainer) {
+          // Ensure the element is focusable
+          if (tablesContainer.getAttribute('tabindex') === null) {
+            tablesContainer.setAttribute('tabindex', '0');
+          }
+          
+          // Set selected table if none is selected
+          if (!selectedTable() && tables().length > 0) {
+            setSelectedTable(tables()[0]);
+          }
+          
+          // Focus the container
+          tablesContainer.focus();
+          setActiveElement('tables-list');
+          
+          // Trigger an update of the focused index in TablesList via custom event
+          const updateEvent = new CustomEvent('update-focused-table', { 
+            detail: { selectedTable: selectedTable() }
+          });
+          globalThis.dispatchEvent(updateEvent);
+          
+          return true;
+        }
+      }
+      
+      // Fallback to querySelector if the reference is not available
+      const tablesList = document.querySelector('.tables-list') as HTMLElement;
+      if (tablesList) {
         // Ensure the element is focusable
-        if (tablesContainer.getAttribute('tabindex') === null) {
-          tablesContainer.setAttribute('tabindex', '0');
+        if (tablesList.getAttribute('tabindex') === null) {
+          tablesList.setAttribute('tabindex', '0');
         }
         
         // Set selected table if none is selected
@@ -282,44 +341,36 @@ function App() {
           setSelectedTable(tables()[0]);
         }
         
-        // Focus the container
-        tablesContainer.focus();
+        // Focus the element
+        tablesList.focus();
         setActiveElement('tables-list');
         
         // Trigger an update of the focused index in TablesList via custom event
-        const updateEvent = new CustomEvent('update-focused-table', { 
-          detail: { selectedTable: selectedTable() }
-        });
-        globalThis.dispatchEvent(updateEvent);
+        if (typeof globalThis !== 'undefined') {
+          const updateEvent = new CustomEvent('update-focused-table', { 
+            detail: { selectedTable: selectedTable() }
+          });
+          globalThis.dispatchEvent(updateEvent);
+        }
         
-        return;
+        return true;
       }
-    }
+      
+      return false;
+    };
     
-    // Fallback to querySelector if the reference is not available
-    const tablesList = document.querySelector('.tables-list') as HTMLElement;
-    if (tablesList) {
-      // Ensure the element is focusable
-      if (tablesList.getAttribute('tabindex') === null) {
-        tablesList.setAttribute('tabindex', '0');
-      }
-      
-      // Set selected table if none is selected
-      if (!selectedTable() && tables().length > 0) {
-        setSelectedTable(tables()[0]);
-      }
-      
-      // Focus the element
-      tablesList.focus();
-      setActiveElement('tables-list');
-      
-      // Trigger an update of the focused index in TablesList via custom event
-      if (typeof globalThis !== 'undefined') {
-        const updateEvent = new CustomEvent('update-focused-table', { 
-          detail: { selectedTable: selectedTable() }
-        });
-        globalThis.dispatchEvent(updateEvent);
-      }
+    // Try to focus immediately
+    if (attemptFocus()) return;
+    
+    // If we couldn't focus immediately and the tables list should be visible,
+    // retry a few times with increasing delays
+    if (tablesVisible()) {
+      const retryInterval = setInterval(() => {
+        attempts++;
+        if (attemptFocus() || attempts >= maxAttempts) {
+          clearInterval(retryInterval);
+        }
+      }, 50); // Try every 50ms
     }
   }
 
@@ -707,7 +758,27 @@ function App() {
   
   // Toggle tables sidebar
   function toggleTablesSidebar() {
-    setTablesVisible(!tablesVisible());
+    const newVisibility = !tablesVisible();
+    setTablesVisible(newVisibility);
+    
+    // If we're making the tables list visible, focus it after rendering
+    if (newVisibility) {
+      setTimeout(() => {
+        const listElement = document.querySelector('.tables-list');
+        if (listElement) {
+          (listElement as HTMLElement).focus();
+          setActiveElement('tables-list');
+          
+          // Also manually trigger a focus update to highlight the selected item
+          if (typeof globalThis !== 'undefined') {
+            const updateEvent = new CustomEvent('update-focused-table', { 
+              detail: { selectedTable: selectedTable() }
+            });
+            globalThis.dispatchEvent(updateEvent);
+          }
+        }
+      }, 150);
+    }
   }
   
   // Toggle connection dialog
