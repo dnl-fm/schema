@@ -38,8 +38,8 @@ export const QueryEditor = (props: QueryEditorProps) => {
   
   // Expose the textarea ref to the global scope for keyboard shortcuts
   onMount(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).queryEditorTextarea = textareaRef;
+    if (typeof globalThis !== 'undefined') {
+      (globalThis as any).queryEditorTextarea = textareaRef;
     }
   });
 

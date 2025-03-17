@@ -30,8 +30,8 @@ export const ResultsTable = (props: ResultsTableProps) => {
   
   // Expose the table container ref to the global scope for keyboard shortcuts
   onMount(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).resultsTableContainer = tableContainerRef;
+    if (typeof globalThis !== 'undefined') {
+      (globalThis as any).resultsTableContainer = tableContainerRef;
     }
   });
 

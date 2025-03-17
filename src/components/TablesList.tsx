@@ -35,11 +35,11 @@ export const TablesList = (props: TablesListProps) => {
   
   // Expose the container ref to the global scope for keyboard shortcuts
   onMount(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).tablesListContainer = containerRef;
+    if (typeof globalThis !== 'undefined') {
+      (globalThis as any).tablesListContainer = containerRef;
       
       // Add event listener for the custom event
-      window.addEventListener('update-focused-table', handleUpdateFocusedTable as EventListener);
+      globalThis.addEventListener('update-focused-table', handleUpdateFocusedTable as EventListener);
     }
     
     // Initialize focused index based on selected table
@@ -48,8 +48,8 @@ export const TablesList = (props: TablesListProps) => {
   
   // Clean up event listeners when component unmounts
   onCleanup(() => {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('update-focused-table', handleUpdateFocusedTable as EventListener);
+    if (typeof globalThis !== 'undefined') {
+      globalThis.removeEventListener('update-focused-table', handleUpdateFocusedTable as EventListener);
     }
   });
   
@@ -96,9 +96,9 @@ export const TablesList = (props: TablesListProps) => {
           props.onSelectTable(tableToSelect, false);
           
           // Notify App to focus query editor after selection
-          if (typeof window !== 'undefined' && (window as any).focusQueryEditor) {
+          if (typeof globalThis !== 'undefined' && (globalThis as any).focusQueryEditor) {
             setTimeout(() => {
-              (window as any).focusQueryEditor();
+              (globalThis as any).focusQueryEditor();
             }, 100);
           }
         }

@@ -7,6 +7,7 @@ interface TableSidebarProps {
   onSelectTable: (table: string) => void;
   theme: ThemeMode;
   onToggleSettings: () => void;
+  onToggleHelp: () => void;
   dbPath: string;
   onDbPathChange: (path: string) => void;
   onConnect: () => void;
@@ -55,6 +56,14 @@ export const TableSidebar = (props: TableSidebarProps) => {
           title="Reload Connection"
         >
           <span class="material-icons text-2xl">refresh</span>
+        </button>
+        <button
+          type="button"
+          onClick={props.onToggleHelp}
+          class={`p-2 rounded-full ${themeColors[props.theme as ThemeMode].hover}`}
+          title="Help (Ctrl+H)"
+        >
+          <span class="material-icons text-2xl">help_outline</span>
         </button>
         <button
           type="button"

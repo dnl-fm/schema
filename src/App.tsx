@@ -46,17 +46,17 @@ function App() {
     initAppDb();
     
     // Set up global keyboard event listeners
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    window.addEventListener('focusin', handleFocusChange);
+    globalThis.addEventListener('keydown', handleGlobalKeyDown);
+    globalThis.addEventListener('focusin', handleFocusChange);
     
     onCleanup(() => {
-      window.removeEventListener('keydown', handleGlobalKeyDown);
-      window.removeEventListener('focusin', handleFocusChange);
+      globalThis.removeEventListener('keydown', handleGlobalKeyDown);
+      globalThis.removeEventListener('focusin', handleFocusChange);
     });
 
     // Make focusQueryEditor available globally
-    if (typeof window !== 'undefined') {
-      (window as any).focusQueryEditor = focusQueryEditor;
+    if (typeof globalThis !== 'undefined') {
+      (globalThis as any).focusQueryEditor = focusQueryEditor;
     }
   });
   
@@ -185,8 +185,8 @@ function App() {
   // Focus the query editor
   function focusQueryEditor() {
     // Try to use the exposed textarea reference first
-    if (typeof window !== 'undefined' && (window as any).queryEditorTextarea) {
-      const textarea = (window as any).queryEditorTextarea;
+    if (typeof globalThis !== 'undefined' && (globalThis as any).queryEditorTextarea) {
+      const textarea = (globalThis as any).queryEditorTextarea;
       textarea.focus();
       setActiveElement('query-editor');
       return;
@@ -203,8 +203,8 @@ function App() {
   // Focus the results table
   function focusResultsTable() {
     // Try to use the exposed table container reference first
-    if (typeof window !== 'undefined' && (window as any).resultsTableContainer) {
-      const tableContainer = (window as any).resultsTableContainer;
+    if (typeof globalThis !== 'undefined' && (globalThis as any).resultsTableContainer) {
+      const tableContainer = (globalThis as any).resultsTableContainer;
       // Ensure the element is focusable
       if (tableContainer.getAttribute('tabindex') === null) {
         tableContainer.setAttribute('tabindex', '0');
@@ -248,8 +248,8 @@ function App() {
     if (!tables().length || !tablesVisible()) return;
     
     // Try to use the exposed tables list container reference first
-    if (typeof window !== 'undefined' && (window as any).tablesListContainer) {
-      const tablesContainer = (window as any).tablesListContainer;
+    if (typeof globalThis !== 'undefined' && (globalThis as any).tablesListContainer) {
+      const tablesContainer = (globalThis as any).tablesListContainer;
       // Ensure the element is focusable
       if (tablesContainer.getAttribute('tabindex') === null) {
         tablesContainer.setAttribute('tabindex', '0');
@@ -265,11 +265,11 @@ function App() {
       setActiveElement('tables-list');
       
       // Trigger an update of the focused index in TablesList via custom event
-      if (typeof window !== 'undefined') {
+      if (typeof globalThis !== 'undefined') {
         const updateEvent = new CustomEvent('update-focused-table', { 
           detail: { selectedTable: selectedTable() }
         });
-        window.dispatchEvent(updateEvent);
+        globalThis.dispatchEvent(updateEvent);
       }
       
       return;
@@ -293,11 +293,11 @@ function App() {
       setActiveElement('tables-list');
       
       // Trigger an update of the focused index in TablesList via custom event
-      if (typeof window !== 'undefined') {
+      if (typeof globalThis !== 'undefined') {
         const updateEvent = new CustomEvent('update-focused-table', { 
           detail: { selectedTable: selectedTable() }
         });
-        window.dispatchEvent(updateEvent);
+        globalThis.dispatchEvent(updateEvent);
       }
     }
   }
@@ -568,6 +568,11 @@ function App() {
     setShowConnectionDialog(!showConnectionDialog());
   }
 
+  // Toggle help dialog
+  function toggleHelpDialog() {
+    setShowHelpDialog(!showHelpDialog());
+  }
+
   // Get scrollbar style class based on theme
   const getScrollbarClass = () => {
     if (settings().theme === 'tokyo') {
@@ -600,6 +605,7 @@ function App() {
           onSelectTable={handleTableSelect} 
           theme={settings().theme}
           onToggleSettings={toggleSettings}
+          onToggleHelp={toggleHelpDialog}
           dbPath={dbPath()}
           onDbPathChange={setDbPath}
           onConnect={toggleConnectionDialog}
