@@ -254,8 +254,24 @@ function App() {
       if (tablesContainer.getAttribute('tabindex') === null) {
         tablesContainer.setAttribute('tabindex', '0');
       }
+      
+      // Set selected table if none is selected
+      if (!selectedTable() && tables().length > 0) {
+        setSelectedTable(tables()[0]);
+      }
+      
+      // Focus the container
       tablesContainer.focus();
       setActiveElement('tables-list');
+      
+      // Trigger an update of the focused index in TablesList via custom event
+      if (typeof window !== 'undefined') {
+        const updateEvent = new CustomEvent('update-focused-table', { 
+          detail: { selectedTable: selectedTable() }
+        });
+        window.dispatchEvent(updateEvent);
+      }
+      
       return;
     }
     
@@ -267,9 +283,22 @@ function App() {
         tablesList.setAttribute('tabindex', '0');
       }
       
+      // Set selected table if none is selected
+      if (!selectedTable() && tables().length > 0) {
+        setSelectedTable(tables()[0]);
+      }
+      
       // Focus the element
       tablesList.focus();
       setActiveElement('tables-list');
+      
+      // Trigger an update of the focused index in TablesList via custom event
+      if (typeof window !== 'undefined') {
+        const updateEvent = new CustomEvent('update-focused-table', { 
+          detail: { selectedTable: selectedTable() }
+        });
+        window.dispatchEvent(updateEvent);
+      }
     }
   }
 
@@ -430,6 +459,11 @@ function App() {
       
       // Save to connection history
       await saveConnectionToHistory(dbPath());
+      
+      // Focus on the table list after successful connection
+      setTimeout(() => {
+        focusTablesList();
+      }, 100); // Small delay to ensure UI has updated
     } catch (err) {
       console.error("Error connecting to database:", err);
       setError(`Error: ${err instanceof Error ? err.message : String(err)}`);

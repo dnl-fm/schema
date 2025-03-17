@@ -1,4 +1,4 @@
-import { For, Show, createSignal, onMount } from "solid-js";
+import { For, Show, createSignal, onMount, onCleanup } from "solid-js";
 import { themeColors } from "../utils/theme.ts";
 import { ThemeMode } from "../types/theme.ts";
 
@@ -17,12 +17,51 @@ export const TablesList = (props: TablesListProps) => {
   // Reference to the container element
   let containerRef: HTMLDivElement | undefined;
   
+  // Handler for the custom event
+  const handleUpdateFocusedTable = (e: CustomEvent) => {
+    if (e.detail && e.detail.selectedTable) {
+      const index = props.tables.findIndex(t => t === e.detail.selectedTable);
+      if (index >= 0) {
+        setFocusedIndex(index);
+        // Scroll to ensure the item is visible
+        setTimeout(() => scrollToTable(index), 50);
+      } else if (props.tables.length > 0) {
+        // If the selected table isn't found, focus the first table
+        setFocusedIndex(0);
+        setTimeout(() => scrollToTable(0), 50);
+      }
+    }
+  };
+  
   // Expose the container ref to the global scope for keyboard shortcuts
   onMount(() => {
     if (typeof window !== 'undefined') {
       (window as any).tablesListContainer = containerRef;
+      
+      // Add event listener for the custom event
+      window.addEventListener('update-focused-table', handleUpdateFocusedTable as EventListener);
+    }
+    
+    // Initialize focused index based on selected table
+    updateFocusedIndex();
+  });
+  
+  // Clean up event listeners when component unmounts
+  onCleanup(() => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('update-focused-table', handleUpdateFocusedTable as EventListener);
     }
   });
+  
+  // Update focused index when tables or selectedTable change
+  const updateFocusedIndex = () => {
+    const currentTableIndex = props.tables.findIndex(t => t === props.selectedTable);
+    if (currentTableIndex >= 0) {
+      setFocusedIndex(currentTableIndex);
+    } else if (props.tables.length > 0) {
+      setFocusedIndex(0);
+    }
+  };
   
   // Handle keyboard navigation
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -47,7 +86,8 @@ export const TablesList = (props: TablesListProps) => {
         });
         break;
         
-      case ' ': // Spacebar only, removed Enter
+      case ' ': // Spacebar
+      case 'Enter': // Added Enter key
         e.preventDefault();
         if (focusedIndex() >= 0 && focusedIndex() < props.tables.length) {
           const tableToSelect = props.tables[focusedIndex()];
@@ -85,21 +125,16 @@ export const TablesList = (props: TablesListProps) => {
     }
   };
   
-  // Initialize focused index when tables change or component mounts
+  // Update focused index when tables or selectedTable change
   onMount(() => {
-    const currentTableIndex = props.tables.findIndex(t => t === props.selectedTable);
-    if (currentTableIndex >= 0) {
-      setFocusedIndex(currentTableIndex);
-    } else if (props.tables.length > 0) {
-      setFocusedIndex(0);
-    }
+    updateFocusedIndex();
   });
 
   return (
     <Show when={props.isVisible}>
       <div 
         ref={containerRef}
-        class={`tables-list w-64 h-full ${themeColors[props.theme].sidebar} border-r ${themeColors[props.theme].sidebarBorder} overflow-y-auto ${isFocused() ? `ring-2 ${themeColors[props.theme].focusRing}` : ''}`}
+        class={`tables-list w-64 h-full ${themeColors[props.theme].sidebar} border-r ${themeColors[props.theme].sidebarBorder} overflow-y-auto`}
         tabIndex={0}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
@@ -114,7 +149,7 @@ export const TablesList = (props: TablesListProps) => {
               <li 
                 class={`px-4 py-2 cursor-pointer ${themeColors[props.theme].hover} ${
                   props.selectedTable === table ? themeColors[props.theme].tableRowSelected : ''
-                } ${focusedIndex() === index() ? `ring-2 ${themeColors[props.theme].focusRing}` : ''}`}
+                } ${focusedIndex() === index() && isFocused() ? `ring-2 ${themeColors[props.theme].focusRing}` : ''}`}
                 onClick={() => {
                   props.onSelectTable(table, true);
                   setFocusedIndex(index());

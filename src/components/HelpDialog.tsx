@@ -29,7 +29,7 @@ export default function HelpDialog(props: HelpDialogProps) {
       title: "Tables Navigation",
       shortcuts: [
         { key: "↑ / ↓", description: "Navigate between tables" },
-        { key: "Space", description: "Select table (moves to query editor)" }
+        { key: "Space / Enter", description: "Select table (moves to query editor)" }
       ]
     },
     {
