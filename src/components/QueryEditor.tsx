@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from "solid-js";
+import { createSignal, createEffect, onMount } from "solid-js";
 
 interface QueryEditorProps {
   onExecuteQuery: (query: string) => void;
@@ -11,6 +11,10 @@ interface QueryEditorProps {
 
 export const QueryEditor = (props: QueryEditorProps) => {
   const [query, setQuery] = createSignal("");
+  const [isFocused, setIsFocused] = createSignal(false);
+  
+  // Create a ref for the textarea
+  let textareaRef: HTMLTextAreaElement | undefined;
 
   // Update query when selected table changes
   createEffect(() => {
@@ -19,8 +23,26 @@ export const QueryEditor = (props: QueryEditorProps) => {
     }
   });
 
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Execute query on Ctrl+Enter
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      if (!props.isLoading) {
+        props.onExecuteQuery(query());
+      }
+    }
+  };
+  
+  // Expose the textarea ref to the global scope for keyboard shortcuts
+  onMount(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).queryEditorTextarea = textareaRef;
+    }
+  });
+
   return (
-    <div class={`flex flex-col h-64 border ${props.theme === 'dark' ? 'border-gray-800' : 'border-gray-300'} rounded-md`}>
+    <div class={`query-editor flex flex-col h-64 border ${isFocused() ? (props.theme === 'dark' ? 'border-blue-500 ring-2 ring-blue-500' : 'border-blue-400 ring-2 ring-blue-400') : (props.theme === 'dark' ? 'border-gray-800' : 'border-gray-300')} rounded-md`}>
       <div class={`flex justify-between items-center px-4 py-2 ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-100 border-gray-300'} border-b`}>
         <h3 class="font-medium">SQL Query</h3>
         <div class="flex items-center">
@@ -34,8 +56,12 @@ export const QueryEditor = (props: QueryEditorProps) => {
         </div>
       </div>
       <textarea 
+        ref={textareaRef}
         value={query()} 
         onInput={(e) => setQuery(e.currentTarget.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         class={`flex-1 p-4 resize-none focus:outline-none ${props.theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}
         style={{
           "font-family": props.fontFamily,

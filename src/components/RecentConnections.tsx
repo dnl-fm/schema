@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { ConnectionHistory } from "../types";
+import { ConnectionHistory } from "../types.ts";
 
 interface RecentConnectionsProps {
   connections: ConnectionHistory[];

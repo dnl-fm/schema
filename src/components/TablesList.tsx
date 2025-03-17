@@ -11,7 +11,7 @@ interface TablesListProps {
 export const TablesList = (props: TablesListProps) => {
   return (
     <Show when={props.isVisible}>
-      <div class={`w-48 h-full ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-100 border-gray-200'} border-r overflow-y-auto`}>
+      <div class={`w-64 h-full ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-100 border-gray-200'} border-r overflow-y-auto`}>
         <div class={`p-4 border-b ${props.theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
           <h3 class="text-md font-semibold">Tables</h3>
         </div>

@@ -1,0 +1,115 @@
+# SQLite Explorer - Technology Stack and Architecture
+
+# Core Technologies
+tech_stack:
+  frontend:
+    - "SolidJS v1.9.3 - Core UI framework"
+    - "TypeScript v5.6.2 - Type safety and developer experience"
+    - "Vite v6.0.3 - Build tool and development server"
+    - "Tailwind CSS v4.0.14 - Utility-first CSS framework"
+
+  backend:
+    - "Tauri v2.0 - Desktop application framework"
+    - "SQLite v3 - Database engine"
+    - "@tauri-apps/plugin-sql v2.2.0 - Database connectivity"
+    - "@tauri-apps/plugin-dialog v2.2.0 - Native file dialogs"
+    - "Deno v2.2.x - Runtime"
+
+# Project Architecture
+architecture:
+  components:
+    - name: "Main Application (App)"
+      description: "Root component managing global state and layout"
+      features:
+        - "Database connection management"
+        - "Table and query state"
+        - "Settings persistence"
+        - "Theme management"
+
+    - name: "Navigation"
+      description: "Left sidebar navigation system"
+      features:
+        - "Collapsible table list"
+        - "Database connection controls"
+        - "Settings access"
+        - "Connection reload"
+
+    - name: "Query Interface"
+      description: "SQL query and results management"
+      features:
+        - "SQL query editor"
+        - "Results table with sorting"
+        - "Row detail view"
+        - "Query execution"
+
+    - name: "Settings System"
+      description: "Application configuration"
+      features:
+        - "Theme switching (dark/light)"
+        - "Font size customization"
+        - "Font family selection"
+        - "Settings persistence in SQLite"
+
+# State Management
+state:
+  global:
+    - "Database connection state"
+    - "Selected table and query results"
+    - "UI preferences and settings"
+    - "Theme configuration"
+
+  local:
+    - "Component-specific UI states"
+    - "Form inputs and validations"
+    - "Temporary view states"
+
+# Database Structure
+databases:
+  app_db:
+    name: "tlite_settings.db"
+    tables:
+      - name: "settings"
+        description: "Stores user preferences"
+      - name: "connections"
+        description: "Recent database connections"
+
+  user_db:
+    description: "User-provided SQLite database"
+    features:
+      - "Dynamic table discovery"
+      - "Schema inspection"
+      - "Query execution"
+
+# Theme System
+theming:
+  features:
+    - "Dark/light mode support"
+    - "Consistent color palette"
+    - "Component-level theming"
+    - "Runtime theme switching"
+
+  components:
+    - "Color scheme definitions"
+    - "Typography settings"
+    - "Spacing system"
+    - "Border radiuses"
+    - "Shadow definitions"
+
+# Development Environment
+dev_environment:
+  required:
+    - "Node.js 18+"
+    - "Rust toolchain (for Tauri)"
+    - "SQLite development libraries"
+
+  commands:
+    dev: "npm run tauri dev"
+    build: "npm run tauri build"
+    test: "npm test"
+
+# Known Issues and Limitations
+limitations:
+  - "Large result sets may impact performance"
+  - "Limited to SQLite databases"
+  - "No query history feature yet"
+  - "Single database connection at a time"

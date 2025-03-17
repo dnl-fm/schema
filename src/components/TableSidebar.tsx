@@ -1,5 +1,3 @@
-import { For, Show } from "solid-js";
-
 interface TableSidebarProps {
   tables: string[];
   selectedTable: string;
@@ -13,6 +11,7 @@ interface TableSidebarProps {
   isConnected: boolean;
   onToggleTables: () => void;
   tablesVisible: boolean;
+  onReload: () => void;
 }
 
 export const TableSidebar = (props: TableSidebarProps) => {
@@ -41,8 +40,16 @@ export const TableSidebar = (props: TableSidebarProps) => {
         </button>
       </div>
       
-      {/* Settings button at bottom */}
-      <div class={`p-2 flex justify-center border-t ${props.theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+      {/* Bottom buttons */}
+      <div class={`p-2 flex flex-col items-center gap-2 border-t ${props.theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+        <button
+          onClick={props.onReload}
+          disabled={!props.isConnected || props.isLoading}
+          class={`p-2 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-200'} ${!props.isConnected || props.isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title="Reload Connection"
+        >
+          <span class="material-icons text-2xl">refresh</span>
+        </button>
         <button
           onClick={props.onToggleSettings}
           class={`p-2 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-200'}`}

@@ -1,13 +1,13 @@
-import { createSignal, Show, createEffect, onMount } from "solid-js";
+import { createSignal, Show, createEffect, onMount, onCleanup } from "solid-js";
 import Database from "@tauri-apps/plugin-sql";
-import { TableRow, QueryResult, ConnectionHistory, AppSettings } from "./types";
-import TableSidebar from "./components/TableSidebar";
-import TablesList from "./components/TablesList";
-import ConnectionDialog from "./components/ConnectionDialog";
-import QueryEditor from "./components/QueryEditor";
-import ResultsTable from "./components/ResultsTable";
-import RowDetailSidebar from "./components/RowDetailSidebar";
-import SettingsMenu from "./components/SettingsMenu";
+import { TableRow, QueryResult, ConnectionHistory, AppSettings } from "./types.ts";
+import TableSidebar from "./components/TableSidebar.tsx";
+import TablesList from "./components/TablesList.tsx";
+import ConnectionDialog from "./components/ConnectionDialog.tsx";
+import QueryEditor from "./components/QueryEditor.tsx";
+import ResultsTable from "./components/ResultsTable.tsx";
+import RowDetailSidebar from "./components/RowDetailSidebar.tsx";
+import SettingsMenu from "./components/SettingsMenu.tsx";
 
 function App() {
   const [dbPath, setDbPath] = createSignal("/home/fightbulc/Buildspace/code/ato/subs/data/dump.sqlite");
@@ -33,11 +33,182 @@ function App() {
   const [selectedRow, setSelectedRow] = createSignal<Record<string, unknown> | null>(null);
   const [selectedRowIndex, setSelectedRowIndex] = createSignal<number | null>(null);
   const [detailSidebarOpen, setDetailSidebarOpen] = createSignal(false);
+  
+  // Track active element for keyboard shortcuts
+  const [activeElement, setActiveElement] = createSignal<string | null>(null);
 
   // Initialize app on mount
   onMount(() => {
     initAppDb();
+    
+    // Set up global keyboard event listeners
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    window.addEventListener('focusin', handleFocusChange);
+    
+    onCleanup(() => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+      window.removeEventListener('focusin', handleFocusChange);
+    });
   });
+  
+  // Handle focus changes to track active element
+  function handleFocusChange(e: FocusEvent) {
+    const target = e.target as HTMLElement;
+    
+    if (target.tagName === 'TEXTAREA' && target.closest('.query-editor')) {
+      setActiveElement('query-editor');
+    } else if (target.closest('.results-table') || target.classList.contains('results-table')) {
+      setActiveElement('results-table');
+    } else {
+      setActiveElement(null);
+    }
+  }
+  
+  // Handle global keyboard shortcuts
+  function handleGlobalKeyDown(e: KeyboardEvent) {
+    // Global shortcut: Ctrl+Q to focus query editor
+    if (e.ctrlKey && e.key === 'q') {
+      e.preventDefault();
+      focusQueryEditor();
+      return;
+    }
+    
+    // Global shortcut: Ctrl+R to focus results table
+    if (e.ctrlKey && e.key === 'r') {
+      e.preventDefault();
+      focusResultsTable();
+      return;
+    }
+    
+    // Handle ESC key for dialogs
+    if (e.key === 'Escape') {
+      // Close settings dialog if open
+      if (showSettings()) {
+        e.preventDefault();
+        setShowSettings(false);
+        return;
+      }
+      
+      // Close connection dialog if open
+      if (showConnectionDialog()) {
+        e.preventDefault();
+        setShowConnectionDialog(false);
+        return;
+      }
+      
+      // Close detail sidebar if open (when results table is focused)
+      if (activeElement() === 'results-table' && detailSidebarOpen()) {
+        e.preventDefault();
+        setDetailSidebarOpen(false);
+        return;
+      }
+    }
+    
+    // Execute query with Ctrl+Enter when in query editor
+    if (e.ctrlKey && e.key === 'Enter' && activeElement() === 'query-editor') {
+      e.preventDefault();
+      const textareaElement = document.querySelector('.query-editor textarea') as HTMLTextAreaElement;
+      if (textareaElement && !loading()) {
+        executeQuery(textareaElement.value);
+      }
+    }
+    
+    // Handle results table navigation
+    if (activeElement() === 'results-table' && queryResults()) {
+      const results = queryResults();
+      if (!results || results.rows.length === 0) return;
+      
+      const currentIndex = selectedRowIndex() ?? -1;
+      const maxIndex = results.rows.length - 1;
+      
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (currentIndex < maxIndex) {
+            const newIndex = currentIndex + 1;
+            setSelectedRow(results.rows[newIndex]);
+            setSelectedRowIndex(newIndex);
+          }
+          break;
+          
+        case 'ArrowUp':
+          e.preventDefault();
+          if (currentIndex > 0) {
+            const newIndex = currentIndex - 1;
+            setSelectedRow(results.rows[newIndex]);
+            setSelectedRowIndex(newIndex);
+          }
+          break;
+          
+        case ' ': // Spacebar
+          e.preventDefault();
+          if (currentIndex >= 0) {
+            toggleDetailSidebar();
+          }
+          break;
+      }
+    }
+  }
+  
+  // Focus the query editor
+  function focusQueryEditor() {
+    // Try to use the exposed textarea reference first
+    if (typeof window !== 'undefined' && (window as any).queryEditorTextarea) {
+      const textarea = (window as any).queryEditorTextarea;
+      textarea.focus();
+      setActiveElement('query-editor');
+      return;
+    }
+    
+    // Fallback to querySelector if the reference is not available
+    const queryTextarea = document.querySelector('.query-editor textarea') as HTMLTextAreaElement;
+    if (queryTextarea) {
+      queryTextarea.focus();
+      setActiveElement('query-editor');
+    }
+  }
+  
+  // Focus the results table
+  function focusResultsTable() {
+    // Try to use the exposed table container reference first
+    if (typeof window !== 'undefined' && (window as any).resultsTableContainer) {
+      const tableContainer = (window as any).resultsTableContainer;
+      // Ensure the element is focusable
+      if (tableContainer.getAttribute('tabindex') === null) {
+        tableContainer.setAttribute('tabindex', '0');
+      }
+      tableContainer.focus();
+      setActiveElement('results-table');
+      
+      // Select first row if none selected and results exist
+      const results = queryResults();
+      if (results && results.rows.length > 0 && selectedRowIndex() === null) {
+        setSelectedRow(results.rows[0]);
+        setSelectedRowIndex(0);
+      }
+      return;
+    }
+    
+    // Fallback to querySelector if the reference is not available
+    const resultsTable = document.querySelector('.results-table') as HTMLElement;
+    if (resultsTable) {
+      // Ensure the element is focusable
+      if (resultsTable.getAttribute('tabindex') === null) {
+        resultsTable.setAttribute('tabindex', '0');
+      }
+      
+      // Focus the element
+      resultsTable.focus();
+      setActiveElement('results-table');
+      
+      // Select first row if none selected and results exist
+      const results = queryResults();
+      if (results && results.rows.length > 0 && selectedRowIndex() === null) {
+        setSelectedRow(results.rows[0]);
+        setSelectedRowIndex(0);
+      }
+    }
+  }
 
   // Load settings from database
   async function loadSettings() {
@@ -241,6 +412,11 @@ function App() {
       if (!wasSidebarOpen) {
         setDetailSidebarOpen(false);
       }
+      
+      // Focus the results table after query execution
+      setTimeout(() => {
+        focusResultsTable();
+      }, 100);
     } catch (err) {
       console.error("Error executing query:", err);
       setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
@@ -271,12 +447,6 @@ function App() {
   // Toggle detail sidebar
   function toggleDetailSidebar() {
     setDetailSidebarOpen(!detailSidebarOpen());
-  }
-  
-  // Handle selecting a recent connection
-  function handleSelectRecentConnection(path: string) {
-    setDbPath(path);
-    connectToDatabase();
   }
   
   // Toggle tables sidebar
@@ -320,6 +490,7 @@ function App() {
           isConnected={connected()}
           onToggleTables={toggleTablesSidebar}
           tablesVisible={tablesVisible()}
+          onReload={connectToDatabase}
         />
         
         {/* Tables sidebar (collapsible) */}
@@ -333,10 +504,44 @@ function App() {
         
         {/* Main content */}
         <Show when={connected()} fallback={
-          <div class="flex-1 flex items-center justify-center">
-            <div class={`text-center p-8 max-w-md ${settings().theme === 'dark' ? 'bg-black text-white border border-gray-800' : 'bg-white'} rounded-lg shadow-lg`}>
+          <div class="flex-1 flex items-center justify-center p-4">
+            <div class={`text-center p-6 w-full max-w-2xl ${settings().theme === 'dark' ? 'bg-black text-white border border-gray-800' : 'bg-white'} rounded-lg shadow-lg`}>
               <h2 class="text-2xl font-bold mb-4">Welcome to SQLite Explorer</h2>
-              <p class={`${settings().theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>Click the database icon to connect to a SQLite database</p>
+              <p class={`${settings().theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-6`}>Click the database icon to connect to a SQLite database</p>
+              
+              {/* Recent connections */}
+              <Show when={recentConnections().length > 0}>
+                <div class="mt-8">
+                  <h3 class="text-lg font-medium mb-3">Recent Connections</h3>
+                  <div class={`border ${settings().theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} rounded-md overflow-hidden w-full`}>
+                    <ul class={`divide-y ${settings().theme === 'dark' ? 'divide-gray-800' : 'divide-gray-200'}`}>
+                      <For each={recentConnections()}>
+                        {(connection) => (
+                          <li>
+                            <button
+                              onClick={() => {
+                                setDbPath(connection.path);
+                                connectToDatabase();
+                              }}
+                              class={`w-full text-left px-4 py-3 ${settings().theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-50'} flex items-center`}
+                            >
+                              <div class="flex-1">
+                                <div class={`font-medium ${settings().theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                                  {connection.path.split('/').pop()}
+                                </div>
+                                <div class={`text-sm ${settings().theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} break-all`}>
+                                  {connection.path}
+                                </div>
+                              </div>
+                              <span class="material-icons text-gray-400 ml-2 flex-shrink-0">chevron_right</span>
+                            </button>
+                          </li>
+                        )}
+                      </For>
+                    </ul>
+                  </div>
+                </div>
+              </Show>
             </div>
           </div>
         }>
@@ -373,6 +578,7 @@ function App() {
           theme={settings().theme}
           fontFamily={settings().fontFamily}
           fontSize={settings().fontSize}
+          selectedRowIndex={selectedRowIndex()}
         />
       </div>
 
@@ -404,11 +610,6 @@ function App() {
         onClose={() => setShowSettings(false)}
         isOpen={showSettings()}
       />
-
-      {/* Footer */}
-      <footer class={`${settings().theme === 'dark' ? 'bg-black border-gray-900 text-gray-600' : 'bg-gray-100 border-gray-200 text-gray-600'} border-t p-2 text-center text-sm`}>
-        Tauri SQLite Explorer
-      </footer>
     </div>
   );
 }

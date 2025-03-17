@@ -3,9 +3,12 @@
   "specifiers": {
     "npm:@tailwindcss/vite@^4.0.14": "4.0.14_vite@6.2.0_lightningcss@1.29.2",
     "npm:@tauri-apps/api@2": "2.3.0",
+    "npm:@tauri-apps/api@^2.3.0": "2.3.0",
     "npm:@tauri-apps/cli@2": "2.3.1",
+    "npm:@tauri-apps/plugin-dialog@2.2": "2.2.0",
     "npm:@tauri-apps/plugin-opener@2": "2.2.6",
     "npm:@tauri-apps/plugin-sql@^2.2.0": "2.2.0",
+    "npm:@types/node@^22.13.10": "22.13.10",
     "npm:solid-js@^1.9.3": "1.9.5_seroval@1.2.1",
     "npm:tailwindcss@^4.0.14": "4.0.14",
     "npm:typescript@~5.6.2": "5.6.3",
@@ -423,6 +426,12 @@
         "@tauri-apps/cli-win32-x64-msvc"
       ]
     },
+    "@tauri-apps/plugin-dialog@2.2.0": {
+      "integrity": "sha512-6bLkYK68zyK31418AK5fNccCdVuRnNpbxquCl8IqgFByOgWFivbiIlvb79wpSXi0O+8k8RCSsIpOquebusRVSg==",
+      "dependencies": [
+        "@tauri-apps/api"
+      ]
+    },
     "@tauri-apps/plugin-opener@2.2.6": {
       "integrity": "sha512-bSdkuP71ZQRepPOn8BOEdBKYJQvl6+jb160QtJX/i2H9BF6ZySY/kYljh76N2Ne5fJMQRge7rlKoStYQY5Jq1w==",
       "dependencies": [
@@ -466,6 +475,12 @@
     },
     "@types/estree@1.0.6": {
       "integrity": "sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw=="
+    },
+    "@types/node@22.13.10": {
+      "integrity": "sha512-I6LPUvlRH+O6VRUqYOcMudhaIdUVWfsjnZavnsraHvpBwaEyMN29ry+0UVJhImYL16xsscu0aske3yA+uPOWfw==",
+      "dependencies": [
+        "undici-types"
+      ]
     },
     "babel-plugin-jsx-dom-expressions@0.39.7_@babel+core@7.26.9": {
       "integrity": "sha512-8GzVmFla7jaTNWW8W+lTMl9YGva4/06CtwJjySnkYtt8G1v9weCzc2SuF1DfrudcCNb2Doetc1FRg33swBYZCA==",
@@ -740,6 +755,9 @@
     "typescript@5.6.3": {
       "integrity": "sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw=="
     },
+    "undici-types@6.20.0": {
+      "integrity": "sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg=="
+    },
     "update-browserslist-db@1.1.2_browserslist@4.24.4": {
       "integrity": "sha512-PPypAm5qvlD7XMZC3BujecnaOxwhrtoFR+Dqkk5Aa/6DssiH0ibKoketaj9w8LP7Bont1rYeoV5plxD7RTEPRg==",
       "dependencies": [
@@ -793,14 +811,39 @@
       "integrity": "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="
     }
   },
+  "redirects": {
+    "https://esm.sh/seroval-plugins@^1.1.0/web?target=denonext": "https://esm.sh/seroval-plugins@1.2.1/web?target=denonext",
+    "https://esm.sh/seroval@^1.0?target=denonext": "https://esm.sh/seroval@1.2.1?target=denonext",
+    "https://esm.sh/seroval@^1.1.0?target=denonext": "https://esm.sh/seroval@1.2.1?target=denonext"
+  },
+  "remote": {
+    "https://esm.sh/preact@10.15.1": "9e1d198acbadbb690508d863692cd0d6991e273911651aa738a87f37d91403af",
+    "https://esm.sh/preact@10.15.1/denonext/hooks.mjs": "4163e2bda58db3c4b177064a9a6d8d800d346ea4ce0ebf2844c7a2802afef00e",
+    "https://esm.sh/preact@10.15.1/denonext/preact.mjs": "1b48be13bc92da57070a420d1cf221c6ab9b532e94b14e12b3f5a5505faccc69",
+    "https://esm.sh/preact@10.15.1/hooks": "e877a4e73f1dff4917a241517207d177f1951686f46d30aaba6b4ad0325da793",
+    "https://esm.sh/seroval-plugins@1.2.1/denonext/web.mjs": "48ded2c23e0708cd1092aaa49b2a4b1d095f2df4d5ccf607c46f7e0548f9b493",
+    "https://esm.sh/seroval-plugins@1.2.1/web?target=denonext": "0268a4ea87c87c7e03da99609e9f7b46ee958be580bda190c84d4601c1bae1a2",
+    "https://esm.sh/seroval@1.2.1/denonext/seroval.mjs": "fe87328fafd4a74a879ec45d99f32d92f4618ab6bc181edaad6717a845946a1a",
+    "https://esm.sh/seroval@1.2.1?target=denonext": "df4e9b89a61ca11f4690db197db468b19b8931f50622f0eaa87eb37f0615c857",
+    "https://esm.sh/solid-js@1.9.3": "8f4601e78680a6d1153322a0bc66e52ca847f4ff494f8eec768fbf522b5214ad",
+    "https://esm.sh/solid-js@1.9.3/denonext/jsx-runtime.mjs": "422ef3ef18be5ecf4cb647e2f9b90f49b79504fe0cb40b95b5a90e535ae45a72",
+    "https://esm.sh/solid-js@1.9.3/denonext/solid-js.mjs": "4d128cf5934d49be8c21c640d0d60dae7e8016a7962885cb48d50a8cc6f3b7cf",
+    "https://esm.sh/solid-js@1.9.3/denonext/store.mjs": "eef10a1e6c7f52cff35c4d5e7d7dcb50a95fbc5e8cdc53352dddfb6b660f76f7",
+    "https://esm.sh/solid-js@1.9.3/denonext/web.mjs": "492dc16c4efae526576bcf36092c50620b9b2d7e36bbf8bdcb46e26db9eac30a",
+    "https://esm.sh/solid-js@1.9.3/jsx-runtime": "68a0209298486381c6b98a730ed59097f46340a38b658437991cb34430afaa99",
+    "https://esm.sh/solid-js@1.9.3/store": "19aa31b7034e004294542da634cee9e4c22828e44caa53d5aff825a2340a2ef8",
+    "https://esm.sh/solid-js@1.9.3/web": "480617acd82c25165f1c2890f50e418b768f939bae8c59ff5e01fcbe8a8e21e0"
+  },
   "workspace": {
     "packageJson": {
       "dependencies": [
         "npm:@tailwindcss/vite@^4.0.14",
-        "npm:@tauri-apps/api@2",
+        "npm:@tauri-apps/api@^2.3.0",
         "npm:@tauri-apps/cli@2",
+        "npm:@tauri-apps/plugin-dialog@2.2",
         "npm:@tauri-apps/plugin-opener@2",
         "npm:@tauri-apps/plugin-sql@^2.2.0",
+        "npm:@types/node@^22.13.10",
         "npm:solid-js@^1.9.3",
         "npm:tailwindcss@^4.0.14",
         "npm:typescript@~5.6.2",

@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show } from "solid-js";
-import { parseJsonValue, syntaxHighlightJson } from "../utils";
+import { parseJsonValue, syntaxHighlightJson } from "../utils.ts";
 
 interface RowDetailSidebarProps {
   row: Record<string, unknown> | null;
@@ -8,6 +8,7 @@ interface RowDetailSidebarProps {
   theme: 'light' | 'dark';
   fontFamily: string;
   fontSize: string;
+  selectedRowIndex: number | null;
 }
 
 export const RowDetailSidebar = (props: RowDetailSidebarProps) => {
@@ -75,7 +76,9 @@ export const RowDetailSidebar = (props: RowDetailSidebarProps) => {
         ></div>
         
         <div class={`flex items-center justify-between p-4 border-b ${props.theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-          <h3 class="font-medium">Row Details</h3>
+          <h3 class="font-medium">
+            Row Details {props.selectedRowIndex !== null ? `(Row ${props.selectedRowIndex + 1})` : ''}
+          </h3>
           <button 
             onClick={props.onClose}
             class={`p-1 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-100'}`}

@@ -1,6 +1,6 @@
-import { For, Show } from "solid-js";
-import { QueryResult } from "../types";
-import { formatValueForDisplay } from "../utils";
+import { For, Show, createSignal, onMount } from "solid-js";
+import { QueryResult } from "../types.ts";
+import { formatValueForDisplay } from "../utils.ts";
 
 interface ResultsTableProps {
   results: QueryResult | null;
@@ -14,29 +14,26 @@ interface ResultsTableProps {
 }
 
 export const ResultsTable = (props: ResultsTableProps) => {
+  const [isFocused, setIsFocused] = createSignal(false);
+  
+  // Create a ref for the table container
+  let tableContainerRef: HTMLDivElement | undefined;
+  
+  // Expose the table container ref to the global scope for keyboard shortcuts
+  onMount(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).resultsTableContainer = tableContainerRef;
+    }
+  });
+  
   return (
-    <div class={`border ${props.theme === 'dark' ? 'border-gray-800' : 'border-gray-300'} rounded-md overflow-hidden mt-4 flex-1 flex flex-col`}>
-      <div class={`flex justify-between items-center px-4 py-2 ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-100 border-gray-300'} border-b`}>
-        <div class="flex items-center">
-          <h3 class="font-medium">Results</h3>
-          <Show when={props.results}>
-            {(results) => (
-              <span class={`ml-2 text-xs ${props.theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                ({results().rows.length} rows)
-              </span>
-            )}
-          </Show>
-        </div>
-        <div class="flex items-center">
-          <button
-            onClick={props.onToggleDetailSidebar}
-            class={`flex items-center text-sm px-2 py-1 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-200 hover:bg-gray-300'} rounded`}
-          >
-            <span class="material-icons text-sm mr-1">{props.detailSidebarOpen ? 'visibility_off' : 'visibility'}</span>
-            {props.detailSidebarOpen ? 'Hide Details' : 'Show Details'}
-          </button>
-        </div>
-      </div>
+    <div 
+      ref={tableContainerRef}
+      class={`results-table border ${isFocused() ? (props.theme === 'dark' ? 'border-blue-500 ring-2 ring-blue-500' : 'border-blue-400 ring-2 ring-blue-400') : (props.theme === 'dark' ? 'border-gray-800' : 'border-gray-300')} rounded-md overflow-hidden mt-4 flex-1 flex flex-col`}
+      tabIndex={0}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+    >
       <div class="overflow-x-auto flex-1">
         <Show when={props.results} fallback={<div class={`p-4 ${props.theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>No results to display</div>}>
           {(results) => (
@@ -65,6 +62,10 @@ export const ResultsTable = (props: ResultsTableProps) => {
                       class={`${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-50'} cursor-pointer ${props.selectedRowIndex === index() ? (props.theme === 'dark' ? 'bg-blue-800 ring-2 ring-blue-500' : 'bg-blue-50 ring-2 ring-blue-400') : ''}`}
                       onClick={() => {
                         props.onRowSelect(row);
+                        setIsFocused(true);
+                        if (tableContainerRef) {
+                          tableContainerRef.focus();
+                        }
                       }}
                     >
                       <For each={results().columns}>
@@ -89,8 +90,21 @@ export const ResultsTable = (props: ResultsTableProps) => {
       
       {/* Action buttons at bottom */}
       <Show when={props.results && props.results.rows.length > 0}>
-        <div class={`flex items-center justify-end px-4 py-2 ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-50 border-gray-200'} border-t`}>
+        <div class={`flex items-center justify-between px-4 py-2 ${props.theme === 'dark' ? 'bg-black border-gray-800' : 'bg-gray-50 border-gray-200'} border-t`}>
+          <div class="flex items-center space-x-2">
+            <h3 class="font-medium">Results:</h3>
+            <Show when={props.results}>
+              <span>{props.results?.rows.length} rows</span>
+            </Show>
+          </div>
           <div class="flex space-x-2">
+            <button
+              onClick={props.onToggleDetailSidebar}
+              class={`flex items-center text-sm px-2 py-1 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-200 hover:bg-gray-300'} rounded`}
+            >
+              <span class="material-icons text-sm mr-1">{props.detailSidebarOpen ? 'visibility_off' : 'visibility'}</span>
+              {props.detailSidebarOpen ? 'Hide Details' : 'Show Details'}
+            </button>
             <button
               class={`flex items-center text-sm px-3 py-1 ${props.theme === 'dark' ? 'bg-black hover:bg-gray-900 border border-gray-800' : 'bg-gray-200 hover:bg-gray-300'} rounded`}
               title="Export results"
