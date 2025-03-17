@@ -101,20 +101,25 @@ export function syntaxHighlightJson(json: string, theme: ThemeMode): string {
 }
 
 // Convert query results to JSON string
-export function resultsToJson(rows: Record<string, unknown>[]): string {
-  return JSON.stringify(rows, null, 2);
+export function resultsToJson(rows: unknown[][]): string {
+  // Convert array rows to objects with column indices as keys
+  const objectRows = rows.map(row => {
+    return row.reduce<Record<string, unknown>>((obj, value, index) => {
+      obj[`column${index}`] = value;
+      return obj;
+    }, {});
+  });
+  return JSON.stringify(objectRows, null, 2);
 }
 
 // Convert query results to CSV string
-export function resultsToCsv(columns: string[], rows: Record<string, unknown>[]): string {
+export function resultsToCsv(columns: string[], rows: unknown[][]): string {
   // Create header row
   const header = columns.join(',');
   
   // Create data rows
   const dataRows = rows.map(row => {
-    return columns.map(column => {
-      const value = row[column];
-      
+    return row.map(value => {
       // Handle null and undefined
       if (value === null || value === undefined) {
         return '';

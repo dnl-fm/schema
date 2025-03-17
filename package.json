@@ -19,6 +19,7 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.4",
+    "@libsql/client": "^0.15.0",
     "@tailwindcss/vite": "^4.0.14",
     "@tauri-apps/plugin-dialog": "~2.2.0",
     "@tauri-apps/plugin-sql": "^2.2.0",

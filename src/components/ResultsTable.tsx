@@ -12,7 +12,7 @@ import { ThemeMode } from "../types/theme.ts";
 
 interface ResultsTableProps {
   results: QueryResult | null;
-  onRowSelect: (row: Record<string, unknown>) => void;
+  onRowSelect: (row: unknown[], index: number) => void;
   selectedRowIndex: number | null;
   onToggleDetailSidebar: () => void;
   detailSidebarOpen: boolean;
@@ -31,7 +31,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
   // Expose the table container ref to the global scope for keyboard shortcuts
   onMount(() => {
     if (typeof globalThis !== 'undefined') {
-      (globalThis as any).resultsTableContainer = tableContainerRef;
+      (globalThis as { resultsTableContainer?: HTMLDivElement }).resultsTableContainer = tableContainerRef;
     }
   });
 
@@ -154,23 +154,19 @@ export const ResultsTable = (props: ResultsTableProps) => {
                     <tr 
                       class={`${themeColors[props.theme].tableRowHover} cursor-pointer ${props.selectedRowIndex === index() ? `${themeColors[props.theme].tableRowSelected} ring-2 ${themeColors[props.theme].focusRing}` : ''}`}
                       onClick={() => {
-                        props.onRowSelect(row);
+                        props.onRowSelect(row, index());
                         setIsFocused(true);
                         if (tableContainerRef) {
                           tableContainerRef.focus();
                         }
                       }}
                     >
-                      <For each={results().columns}>
-                        {(column) => {
-                          const value = row[column];
-                          
-                          return (
-                            <td class={`px-6 py-4 whitespace-nowrap ${themeColors[props.theme].subText}`}>
-                              {formatValueForDisplay(value)}
-                            </td>
-                          );
-                        }}
+                      <For each={row}>
+                        {(value) => (
+                          <td class={`px-6 py-4 whitespace-nowrap ${themeColors[props.theme].subText}`}>
+                            {formatValueForDisplay(value)}
+                          </td>
+                        )}
                       </For>
                     </tr>
                   )}
