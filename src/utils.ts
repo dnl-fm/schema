@@ -83,4 +83,74 @@ export function syntaxHighlightJson(json: string, theme: 'light' | 'dark'): stri
       return `<span class="${cls}">${match}</span>`;
     }
   );
+}
+
+// Convert query results to JSON string
+export function resultsToJson(rows: Record<string, unknown>[]): string {
+  return JSON.stringify(rows, null, 2);
+}
+
+// Convert query results to CSV string
+export function resultsToCsv(columns: string[], rows: Record<string, unknown>[]): string {
+  // Create header row
+  const header = columns.join(',');
+  
+  // Create data rows
+  const dataRows = rows.map(row => {
+    return columns.map(column => {
+      const value = row[column];
+      
+      // Handle null and undefined
+      if (value === null || value === undefined) {
+        return '';
+      }
+      
+      // Convert to string and handle commas by quoting
+      const stringValue = String(value);
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        // Escape quotes by doubling them and wrap in quotes
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      
+      return stringValue;
+    }).join(',');
+  });
+  
+  // Combine header and data rows
+  return [header, ...dataRows].join('\n');
+}
+
+// Copy text to clipboard
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (err) {
+    console.error('Failed to copy text: ', err);
+    return false;
+  }
+}
+
+// Download data as a file
+export function downloadFile(data: string, filename: string, mimeType: string): void {
+  // Create a blob with the data
+  const blob = new Blob([data], { type: mimeType });
+  
+  // Create a URL for the blob
+  const url = URL.createObjectURL(blob);
+  
+  // Create a temporary link element
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  
+  // Append to the document
+  document.body.appendChild(link);
+  
+  // Trigger the download
+  link.click();
+  
+  // Clean up
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 } 

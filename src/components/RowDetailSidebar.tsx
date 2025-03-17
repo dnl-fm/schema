@@ -79,7 +79,8 @@ export const RowDetailSidebar = (props: RowDetailSidebarProps) => {
           <h3 class="font-medium">
             Row Details {props.selectedRowIndex !== null ? `(Row ${props.selectedRowIndex + 1})` : ''}
           </h3>
-          <button 
+          <button
+            type="button"
             onClick={props.onClose}
             class={`p-1 rounded-full ${props.theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-100'}`}
           >

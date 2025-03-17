@@ -23,7 +23,8 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "types": [
-      "node"
+      "node",
+      "solid-js/jsx-runtime"
     ]
   },
   "include": [
