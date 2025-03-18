@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "schema",
+  "productName": "Schema",
   "version": "0.1.0",
   "identifier": "com.schema.app",
   "build": {
@@ -32,6 +32,10 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "DNL",
+    "copyright": "© 2025 DNL",
+    "shortDescription": "Work with SQLite and LibSQL databases",
+    "longDescription": "Effortlessly explore, query, and manage your SQLite and LibSQL databases with Schema. This app provides a user-friendly interface for viewing database schemas, executing SQL queries, and managing your data."
   }
 }
