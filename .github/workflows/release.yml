@@ -31,8 +31,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: Clean previous dependencies (Unix)
+        if: matrix.platform != 'windows-latest'
+        run: |
+          rm -rf node_modules
+          rm -f deno.lock
+
+      - name: Clean previous dependencies (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          if exist node_modules rd /s /q node_modules
+          if exist deno.lock del deno.lock
+
       - name: Install frontend dependencies
         run: |
+          deno install
           deno cache --reload vite.config.ts
           deno cache --reload src/main.tsx
 
