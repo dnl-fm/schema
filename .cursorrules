@@ -70,7 +70,7 @@ state:
 # Database Structure
 databases:
   app_db:
-    name: "tlite_settings.db"
+    name: "schema_settings.db"
     tables:
       - name: "settings"
         description: "Stores user preferences"

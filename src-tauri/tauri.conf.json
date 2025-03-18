@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tlite",
+  "productName": "schema",
   "version": "0.1.0",
-  "identifier": "com.tlite.app",
+  "identifier": "com.schema.app",
   "build": {
     "beforeDevCommand": "deno task dev",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "tlite",
-        "width": 800,
-        "height": 600
+        "title": "Schema",
+        "width": 1200,
+        "height": 800,
+        "fullscreen": true
       }
     ],
     "security": {
