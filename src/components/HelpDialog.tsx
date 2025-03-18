@@ -21,6 +21,7 @@ export default function HelpDialog(props: HelpDialogProps) {
         { key: "Ctrl+Q", description: "Focus query editor" },
         { key: "Ctrl+R", description: "Focus results table" },
         { key: "Ctrl+T", description: "Focus tables list" },
+        { key: "Ctrl+D", description: "Open database connection dialog" },
         { key: "Ctrl+H", description: "Show this help dialog" },
         { key: "Esc", description: "Close dialogs or sidebar" }
       ]

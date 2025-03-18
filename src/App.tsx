@@ -105,6 +105,13 @@ function App() {
       return;
     }
 
+    // Global shortcut: Ctrl+D to show connection dialog
+    if (e.ctrlKey && e.key === "d") {
+      e.preventDefault();
+      toggleConnectionDialog();
+      return;
+    }
+
     // Global shortcut: Ctrl+Q to focus query editor
     if (e.ctrlKey && e.key === "q") {
       e.preventDefault();

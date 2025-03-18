@@ -22,7 +22,7 @@ export const TableSidebar = (props: TableSidebarProps) => {
   return (
     <div class={`w-16 h-full flex flex-col ${themeColors[props.theme as ThemeMode].sidebar} border-r ${themeColors[props.theme as ThemeMode].sidebarBorder}`}>
       {/* Database icon at top */}
-      <div class={`p-2 flex justify-center border-b ${themeColors[props.theme as ThemeMode].sidebarBorder}`}>
+      <div class={`p-2 flex justify-center ${themeColors[props.theme as ThemeMode].sidebarBorder}`}>
         <button
           type="button"
           onClick={props.onConnect}
@@ -39,15 +39,20 @@ export const TableSidebar = (props: TableSidebarProps) => {
         <button
           type="button"
           onClick={props.onToggleTables}
-          class={`p-2 rounded-full ${themeColors[props.theme as ThemeMode].hover} ${props.tablesVisible ? themeColors[props.theme as ThemeMode].buttonBg : ''}`}
-          title="Tables"
+          disabled={!props.isConnected}
+          class={`p-2 rounded-full ${
+            props.isConnected ? themeColors[props.theme as ThemeMode].hover : ''
+          } ${
+            props.tablesVisible && props.isConnected ? themeColors[props.theme as ThemeMode].buttonBg : ''
+          } ${!props.isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={props.isConnected ? "Tables" : "Connect to a database to view tables"}
         >
           <span class="material-icons text-2xl">table_chart</span>
         </button>
       </div>
       
       {/* Bottom buttons */}
-      <div class={`p-2 flex flex-col items-center gap-2 border-t ${themeColors[props.theme as ThemeMode].sidebarBorder}`}>
+      <div class={`p-2 flex flex-col items-center gap-2 ${themeColors[props.theme as ThemeMode].sidebarBorder}`}>
         <button
           type="button"
           onClick={props.onReload}
