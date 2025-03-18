@@ -33,13 +33,16 @@ export const RecentConnections = (props: RecentConnectionsProps) => {
     <div class={`border ${themeColors[props.theme].border} rounded-md overflow-hidden w-full`}>
       <ul class={`divide-y ${themeColors[props.theme].divider}`}>
         <For each={props.connections}>
-          {(connection) => (
+          {(connection, index) => (
             <li>
               <button
                 type="button"
                 onClick={() => props.onSelect(connection)}
-                class={`w-full text-left px-4 py-3 ${themeColors[props.theme].hover} flex items-center`}
+                class={`w-full text-left px-4 py-3 ${themeColors[props.theme].hover} flex items-center gap-3`}
               >
+                <div class={`flex items-center justify-center h-6 w-6 rounded-full ${themeColors[props.theme].buttonBg} text-sm font-medium flex-shrink-0`}>
+                  {index() + 1}
+                </div>
                 <div class="flex-1">
                   <div class={`font-medium ${themeColors[props.theme].headerText}`}>
                     {getDisplayName(connection)}
@@ -47,8 +50,13 @@ export const RecentConnections = (props: RecentConnectionsProps) => {
                   <div class={`text-sm ${themeColors[props.theme].subText} break-all`}>
                     {getFullPath(connection)}
                   </div>
-                  <div class={`text-xs ${themeColors[props.theme].subText} mt-1`}>
-                    {connection.type === 'sqlite' ? 'SQLite' : 'LibSQL'}
+                  <div class={`flex items-center justify-between mt-1`}>
+                    <div class={`text-xs ${themeColors[props.theme].subText}`}>
+                      {connection.type === 'sqlite' ? 'SQLite' : 'LibSQL'}
+                    </div>
+                    <div class={`text-xs ${themeColors[props.theme].subText} italic`}>
+                      Ctrl+{index() + 1}
+                    </div>
                   </div>
                 </div>
               </button>

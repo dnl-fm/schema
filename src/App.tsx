@@ -105,6 +105,20 @@ function App() {
       return;
     }
 
+    // Global shortcut: Ctrl+S to show start page (home)
+    if (e.ctrlKey && e.key === "s") {
+      e.preventDefault();
+      disconnectAndShowHome();
+      return;
+    }
+
+    // Global shortcut: Ctrl+X to show settings (remapped from Ctrl+S)
+    if (e.ctrlKey && e.key === "x") {
+      e.preventDefault();
+      toggleSettings();
+      return;
+    }
+
     // Global shortcut: Ctrl+D to show connection dialog
     if (e.ctrlKey && e.key === "d") {
       e.preventDefault();
@@ -123,6 +137,18 @@ function App() {
     if (e.ctrlKey && e.key === "r") {
       e.preventDefault();
       focusResultsTable();
+      return;
+    }
+
+    // Global shortcut: Ctrl+[1-9] to open recent connections
+    if (e.ctrlKey && e.key >= "1" && e.key <= "9") {
+      e.preventDefault();
+      const connectionIndex = parseInt(e.key) - 1;
+      const connections = recentConnections();
+      
+      if (connections.length > connectionIndex) {
+        handleRecentConnectionSelect(connections[connectionIndex]);
+      }
       return;
     }
 
@@ -890,6 +916,27 @@ function App() {
     return "";
   };
 
+  // Disconnect from current database and show home screen
+  function disconnectAndShowHome() {
+    // Close any dialogs that might be open
+    setShowSettings(false);
+    setShowConnectionDialog(false);
+    setShowHelpDialog(false);
+    setDetailSidebarOpen(false);
+
+    // Reset database-related state
+    setDbClient(null);
+    setTables([]);
+    setSelectedTable("");
+    setQueryResults(null);
+    setError("");
+    setConnected(false);
+    
+    // Reset selection state
+    setSelectedRow(null);
+    setSelectedRowIndex(null);
+  }
+
   return (
     <div
       class={`flex flex-col h-screen ${
@@ -925,6 +972,7 @@ function App() {
           onToggleTables={toggleTablesSidebar}
           tablesVisible={tablesVisible()}
           onReload={connectToDatabase}
+          onHome={disconnectAndShowHome}
         />
 
         {/* Tables sidebar (collapsible) */}
@@ -992,7 +1040,7 @@ function App() {
                         }`}
                       >
                         <For each={recentConnections()}>
-                          {(connection: ConnectionHistory) => {
+                          {(connection: ConnectionHistory, index) => {
                             console.log("Rendering connection:", connection);
 
                             // Helper functions for display
@@ -1019,8 +1067,11 @@ function App() {
                                     handleRecentConnectionSelect(connection)}
                                   class={`w-full text-left px-4 py-3 ${
                                     themeColors[settings().theme].hover
-                                  } flex items-center`}
+                                  } flex items-center gap-3`}
                                 >
+                                  <div class={`flex items-center justify-center h-6 w-6 rounded-full ${themeColors[settings().theme].buttonBg} text-sm font-medium flex-shrink-0`}>
+                                    {index() + 1}
+                                  </div>
                                   <div class="flex-1">
                                     <div
                                       class={`font-medium ${
@@ -1036,14 +1087,19 @@ function App() {
                                     >
                                       {connection.name}
                                     </div>
-                                    <div
-                                      class={`text-xs ${
-                                        themeColors[settings().theme].subText
-                                      } mt-1`}
-                                    >
-                                      {connection.type === "sqlite"
-                                        ? "SQLite"
-                                        : "LibSQL"}
+                                    <div class={`flex items-center justify-between mt-1`}>
+                                      <div
+                                        class={`text-xs ${
+                                          themeColors[settings().theme].subText
+                                        }`}
+                                      >
+                                        {connection.type === "sqlite"
+                                          ? "SQLite"
+                                          : "LibSQL"}
+                                      </div>
+                                      <div class={`text-xs ${themeColors[settings().theme].subText} italic`}>
+                                        Ctrl+{index() + 1}
+                                      </div>
                                     </div>
                                   </div>
                                 </button>

@@ -22,6 +22,8 @@ export default function HelpDialog(props: HelpDialogProps) {
         { key: "Ctrl+R", description: "Focus results table" },
         { key: "Ctrl+T", description: "Focus tables list" },
         { key: "Ctrl+D", description: "Open database connection dialog" },
+        { key: "Ctrl+S", description: "Go to start page (home)" },
+        { key: "Ctrl+X", description: "Open settings" },
         { key: "Ctrl+H", description: "Show this help dialog" },
         { key: "Esc", description: "Close dialogs or sidebar" }
       ]
@@ -45,7 +47,13 @@ export default function HelpDialog(props: HelpDialogProps) {
         { key: "↑ / ↓", description: "Navigate between rows" },
         { key: "Space", description: "Toggle detail sidebar for selected row" },
         { key: "Ctrl+C", description: "Copy results as JSON" },
-        { key: "Ctrl+S", description: "Export results as JSON" }
+        { key: "Ctrl+E", description: "Export results as JSON" }
+      ]
+    },
+    {
+      title: "Recent Connections",
+      shortcuts: [
+        { key: "Ctrl+1 through Ctrl+9", description: "Open recent connection by number" }
       ]
     }
   ];

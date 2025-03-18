@@ -111,8 +111,8 @@ export const ResultsTable = (props: ResultsTableProps) => {
       handleCopy();
     }
     
-    // Ctrl+S to export/save
-    if (e.ctrlKey && e.key === 's') {
+    // Ctrl+E to export/save (changed from Ctrl+S)
+    if (e.ctrlKey && e.key === 'e') {
       e.preventDefault();
       handleExport();
     }
@@ -195,7 +195,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
               type="button"
               onClick={handleExport}
               class={`flex items-center text-sm px-3 py-1 ${themeColors[props.theme].buttonBg} ${themeColors[props.theme].buttonHover} rounded`}
-              title="Export results as JSON (Ctrl+S)"
+              title="Export results as JSON (Ctrl+E)"
             >
               <span class="material-icons text-sm mr-1">download</span>
             </button>

@@ -16,12 +16,25 @@ interface TableSidebarProps {
   onToggleTables: () => void;
   tablesVisible: boolean;
   onReload: () => void;
+  onHome?: () => void;
 }
 
 export const TableSidebar = (props: TableSidebarProps) => {
   return (
     <div class={`w-16 h-full flex flex-col ${themeColors[props.theme as ThemeMode].sidebar} border-r ${themeColors[props.theme as ThemeMode].sidebarBorder}`}>
-      {/* Database icon at top */}
+      {/* Home icon at top */}
+      <div class={`p-2 flex justify-center ${themeColors[props.theme as ThemeMode].sidebarBorder}`}>
+        <button
+          type="button"
+          onClick={props.onHome}
+          class={`p-2 rounded-full ${themeColors[props.theme as ThemeMode].hover}`}
+          title="Home (Ctrl+S)"
+        >
+          <span class="material-icons text-2xl">home</span>
+        </button>
+      </div>
+      
+      {/* Database icon */}
       <div class={`p-2 flex justify-center ${themeColors[props.theme as ThemeMode].sidebarBorder}`}>
         <button
           type="button"
@@ -74,7 +87,7 @@ export const TableSidebar = (props: TableSidebarProps) => {
           type="button"
           onClick={props.onToggleSettings}
           class={`p-2 rounded-full ${themeColors[props.theme as ThemeMode].hover}`}
-          title="Settings"
+          title="Settings (Ctrl+X)"
         >
           <span class="material-icons text-2xl">settings</span>
         </button>

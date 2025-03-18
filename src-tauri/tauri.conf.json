@@ -15,7 +15,8 @@
         "title": "Schema",
         "width": 1200,
         "height": 800,
-        "fullscreen": true
+        "center": true,
+        "maximizable": true
       }
     ],
     "security": {
