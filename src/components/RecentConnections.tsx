@@ -6,7 +6,10 @@ import { ThemeMode } from "../types/theme.ts";
 interface RecentConnectionsProps {
   connections: ConnectionHistory[];
   onSelect: (connection: ConnectionHistory) => void;
+  onRemove: (connection: ConnectionHistory) => void;
+  onEdit: (connection: ConnectionHistory) => void;
   theme: ThemeMode;
+  showKeyboardShortcuts?: boolean;
 }
 
 export const RecentConnections = (props: RecentConnectionsProps) => {
@@ -30,36 +33,59 @@ export const RecentConnections = (props: RecentConnectionsProps) => {
   };
   
   return (
-    <div class={`border ${themeColors[props.theme].border} rounded-md overflow-hidden w-full`}>
-      <ul class={`divide-y ${themeColors[props.theme].divider}`}>
+    <div class={`rounded-md overflow-hidden w-full bg-opacity-50 bg-gray-800`}>
+      <ul class={`divide-y divide-gray-700`}>
         <For each={props.connections}>
           {(connection, index) => (
-            <li>
+            <li class="relative group">
               <button
                 type="button"
                 onClick={() => props.onSelect(connection)}
-                class={`w-full text-left px-4 py-3 ${themeColors[props.theme].hover} flex items-center gap-3`}
+                class={`w-full text-left px-4 py-3 hover:bg-opacity-30 hover:bg-gray-600 flex items-center gap-3 pr-24`}
               >
-                <div class={`flex items-center justify-center h-6 w-6 rounded-full ${themeColors[props.theme].buttonBg} text-sm font-medium flex-shrink-0`}>
+                <div class={`flex items-center justify-center h-6 w-6 rounded-full bg-gray-700 text-sm font-medium flex-shrink-0`}>
                   {index() + 1}
                 </div>
                 <div class="flex-1">
-                  <div class={`font-medium ${themeColors[props.theme].headerText}`}>
+                  <div class={`font-medium text-white`}>
                     {getDisplayName(connection)}
                   </div>
-                  <div class={`text-sm ${themeColors[props.theme].subText} break-all`}>
-                    {getFullPath(connection)}
-                  </div>
                   <div class={`flex items-center justify-between mt-1`}>
-                    <div class={`text-xs ${themeColors[props.theme].subText}`}>
+                    <div class={`text-xs text-gray-400`}>
                       {connection.type === 'sqlite' ? 'SQLite' : 'LibSQL'}
-                    </div>
-                    <div class={`text-xs ${themeColors[props.theme].subText} italic`}>
-                      Ctrl+{index() + 1}
                     </div>
                   </div>
                 </div>
+                {props.showKeyboardShortcuts && index() < 5 && (
+                  <div class={`absolute right-4 top-1/2 -translate-y-1/2 flex-shrink-0 text-xs text-gray-300 bg-gray-700 px-2 py-0.5 rounded group-hover:opacity-0 transition-opacity`}>
+                    Ctrl+{index() + 1}
+                  </div>
+                )}
               </button>
+              <div class="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onEdit(connection);
+                  }}
+                  class="p-1.5 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center"
+                  title="Edit connection"
+                >
+                  <span class="material-icons text-sm">edit</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onRemove(connection);
+                  }}
+                  class="p-1.5 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center"
+                  title="Remove connection"
+                >
+                  <span class="material-icons text-sm text-red-500">close</span>
+                </button>
+              </div>
             </li>
           )}
         </For>

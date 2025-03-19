@@ -26,6 +26,7 @@ export interface ConnectionHistory {
   type: 'sqlite' | 'libsql';
   meta: string;  // JSON string containing type-specific properties
   lastAccessed: number;
+  saved?: boolean; // Flag indicating if this is a saved connection
 }
 
 export interface AppSettings {
@@ -82,12 +83,16 @@ export interface ConnectionDialogProps {
   onAuthTokenChange: (token: string) => void;
   connectionType: DatabaseType;
   onConnectionTypeChange: (type: DatabaseType) => void;
-  onConnect: () => void;
+  onConnect: (options?: { saveOnly?: boolean }) => void;
   isLoading: boolean;
   isConnected: boolean;
+  isEditing?: boolean;
   theme: ThemeMode;
+  savedConnections: ConnectionHistory[];
   recentConnections: ConnectionHistory[];
   onSelectRecent: (connection: ConnectionHistory) => void;
+  onRemoveConnection: (connection: ConnectionHistory) => void;
+  onEditConnection: (connection: ConnectionHistory) => void;
   isOpen: boolean;
   onClose: () => void;
 } 

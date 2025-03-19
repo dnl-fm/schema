@@ -11,13 +11,14 @@ import SettingsMenu from "./components/SettingsMenu.tsx";
 import HelpDialog from "./components/HelpDialog.tsx";
 import { themeColors } from "./utils/theme.ts";
 import { createDatabaseClient, type DatabaseClient } from "./lib/database.ts";
+import { RecentConnections } from "./components/RecentConnections.tsx";
 
 type ActiveElement = "query-editor" | "results-table" | "tables-list" | null;
 
 function App() {
-  const [dbPath, setDbPath] = createSignal("");
-  const [libsqlUrl, setLibsqlUrl] = createSignal("");
-  const [authToken, setAuthToken] = createSignal("");
+  const [dbPath, setDbPath] = createSignal<string>("");
+  const [libsqlUrl, setLibsqlUrl] = createSignal<string>("");
+  const [authToken, setAuthToken] = createSignal<string>("");
   const [connectionType, setConnectionType] = createSignal<"sqlite" | "libsql">(
     "sqlite",
   );
@@ -28,10 +29,13 @@ function App() {
   const [queryResults, setQueryResults] = createSignal<QueryResult | null>(
     null,
   );
-  const [error, setError] = createSignal("");
+  const [error, setError] = createSignal<string | null>(null);
   const [loading, setLoading] = createSignal(false);
   const [connected, setConnected] = createSignal(false);
   const [recentConnections, setRecentConnections] = createSignal<
+    ConnectionHistory[]
+  >([]);
+  const [savedConnections, setSavedConnections] = createSignal<
     ConnectionHistory[]
   >([]);
   const [settings, setSettings] = createSignal<AppSettings>({
@@ -56,9 +60,13 @@ function App() {
   // Track active element for keyboard shortcuts
   const [activeElement, setActiveElement] = createSignal<ActiveElement>(null);
 
+  // Application state
+  const [isEditing, setIsEditing] = createSignal(false);
+
   // Initialize app on mount
-  onMount(() => {
-    initAppDb();
+  onMount(async () => {
+    // Initialize database first before setting up other event listeners
+    await initAppDb();
 
     // Set up global keyboard event listeners
     globalThis.addEventListener("keydown", handleGlobalKeyDown);
@@ -73,6 +81,14 @@ function App() {
     if (typeof globalThis !== "undefined") {
       (globalThis as { focusQueryEditor?: () => void }).focusQueryEditor =
         focusQueryEditor;
+      
+      // Make app database and functions available in the global object
+      (window as any).appDbInstance = () => appDb();
+      (window as any).reloadConnections = async () => {
+        console.log("Global reloadConnections called");
+        return loadRecentConnections();
+      };
+      (window as any).toggleConnectionDialog = toggleConnectionDialog;
     }
   });
 
@@ -96,8 +112,41 @@ function App() {
     }
   }
 
-  // Handle global keyboard shortcuts
+  // Global shortcuts for recent connections
+  function getKeyboardShortcutConnections() {
+    // Only return the first 5 most recent connections for keyboard shortcuts
+    return recentConnections().slice(0, 5);
+  }
+
+  // Global keyboard event handler
   function handleGlobalKeyDown(e: KeyboardEvent) {
+    // Skip events inside input elements
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
+
+    // Global shortcut: Ctrl+K to show connection dialog
+    if (e.ctrlKey && e.key === "k") {
+      e.preventDefault();
+      toggleConnectionDialog();
+      return;
+    }
+
+    // Global shortcut: Ctrl+[1-5] to open recent connections
+    if (e.ctrlKey && e.key >= "1" && e.key <= "5") {
+      e.preventDefault();
+      const connectionIndex = parseInt(e.key) - 1;
+      const connections = getKeyboardShortcutConnections();
+      
+      if (connections.length > connectionIndex) {
+        handleRecentConnectionSelect(connections[connectionIndex]);
+      }
+      return;
+    }
+
     // Global shortcut: Ctrl+H to show help dialog
     if (e.ctrlKey && e.key === "h") {
       e.preventDefault();
@@ -119,13 +168,6 @@ function App() {
       return;
     }
 
-    // Global shortcut: Ctrl+D to show connection dialog
-    if (e.ctrlKey && e.key === "d") {
-      e.preventDefault();
-      toggleConnectionDialog();
-      return;
-    }
-
     // Global shortcut: Ctrl+Q to focus query editor
     if (e.ctrlKey && e.key === "q") {
       e.preventDefault();
@@ -137,18 +179,6 @@ function App() {
     if (e.ctrlKey && e.key === "r") {
       e.preventDefault();
       focusResultsTable();
-      return;
-    }
-
-    // Global shortcut: Ctrl+[1-9] to open recent connections
-    if (e.ctrlKey && e.key >= "1" && e.key <= "9") {
-      e.preventDefault();
-      const connectionIndex = parseInt(e.key) - 1;
-      const connections = recentConnections();
-      
-      if (connections.length > connectionIndex) {
-        handleRecentConnectionSelect(connections[connectionIndex]);
-      }
       return;
     }
 
@@ -438,84 +468,230 @@ function App() {
     }
   }
 
-  // Initialize app database for storing settings
+  // Get app settings database path
+  async function getAppSettingsDbPath() {
+    // For simplicity, we'll use a fixed path in the app's data directory
+    return "schema_settings.db";
+  }
+
+  // Initialize application database
   async function initAppDb() {
     try {
-      // Use a local SQLite database for app settings
-      const database = createDatabaseClient({
+      console.log("Initializing application database...");
+      
+      // Import database library dynamically
+      const { createDatabaseClient } = await import("./lib/database.ts");
+      
+      // Create SQLite client for app settings
+      const appSettingsDbPath = await getAppSettingsDbPath();
+      console.log(`App settings DB path: ${appSettingsDbPath}`);
+      
+      const client = createDatabaseClient({
         type: "sqlite",
-        path: "schema_settings.db",
+        path: appSettingsDbPath,
       });
-      await database.connect();
-      setAppDb(database);
-
-      // Check if tables exist before trying to create them
-      const tablesResult = await database.executeQuery(`
-        SELECT name FROM sqlite_master 
-        WHERE type='table' AND name IN ('connections', 'settings')
+      
+      await client.connect();
+      console.log("Connected to app settings database");
+      
+      // Create settings table if it doesn't exist
+      await client.executeQuery(`
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
       `);
-
-      const existingTables = new Set(tablesResult.rows.map((row) => row[0]));
-
-      // Only create tables if they don't exist
-      if (!existingTables.has("connections")) {
-        // Create connections table
-        await database.executeQuery(`
-          CREATE TABLE IF NOT EXISTS connections (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            display_name TEXT NOT NULL,
-            meta TEXT NOT NULL,
-            type TEXT NOT NULL CHECK (type IN ('sqlite', 'libsql')),
-            last_used INTEGER NOT NULL,
-            UNIQUE(type, meta)
-          )
-        `);
+      
+      // Create connections table if it doesn't exist (saved connections)
+      await client.executeQuery(`
+        CREATE TABLE IF NOT EXISTS connections (
+          display_name TEXT NOT NULL,
+          meta TEXT NOT NULL,
+          type TEXT NOT NULL,
+          last_used INTEGER NOT NULL,
+          PRIMARY KEY (type, meta)
+        )
+      `);
+      
+      // Create recent connections table if it doesn't exist
+      await client.executeQuery(`
+        CREATE TABLE IF NOT EXISTS recent_connections (
+          display_name TEXT NOT NULL,
+          meta TEXT NOT NULL,
+          type TEXT NOT NULL,
+          last_used INTEGER NOT NULL,
+          PRIMARY KEY (type, meta)
+        )
+      `);
+      
+      // Set the database client
+      setAppDb(client);
+      
+      // Make database and functions available in the global object for ConnectionDialog
+      if (typeof window !== "undefined") {
+        console.log("Exposing app database and reload functions to window");
+        (window as any).appDbInstance = () => appDb();
+        (window as any).reloadConnections = async () => {
+          console.log("Global reloadConnections called");
+          return loadRecentConnections();
+        };
       }
-
-      if (!existingTables.has("settings")) {
-        // Create settings table
-        await database.executeQuery(`
-          CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-          )
-        `);
-
-        // Insert default settings if they don't exist
-        const defaultSettings = [
-          { key: "fontSize", value: "14" },
-          { key: "fontFamily", value: "monospace" },
-          { key: "theme", value: "light" as ThemeMode },
-        ];
-
-        for (const setting of defaultSettings) {
-          await database.executeQuery(
-            `INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`,
-            [setting.key, setting.value],
-          );
-        }
-      } else {
-        // Make sure all default settings exist even if table already existed
-        const defaultSettings = [
-          { key: "fontSize", value: "14" },
-          { key: "fontFamily", value: "monospace" },
-          { key: "theme", value: "light" as ThemeMode },
-        ];
-
-        for (const setting of defaultSettings) {
-          await database.executeQuery(
-            `INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`,
-            [setting.key, setting.value],
-          );
-        }
-      }
-
-      // Load recent connections
-      await loadRecentConnections();
-      // Load settings
+      
+      // Load settings and connections
       await loadSettings();
+      await loadRecentConnections();
+      
+      console.log("App database initialization complete");
     } catch (err) {
       console.error("Error initializing app database:", err);
+      setError(`Error initializing app database: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // Track connection as recently used
+  async function trackRecentConnection(connection: ConnectionHistory) {
+    const db = appDb();
+    if (!db) return;
+
+    try {
+      // Get the display name and meta info
+      const displayName = connection.type === "sqlite"
+        ? connection.name.split("/").pop() || connection.name
+        : new URL(connection.name).hostname;
+        
+      // Update or insert into recent_connections table
+      await db.executeQuery(
+        `INSERT INTO recent_connections (display_name, meta, type, last_used)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(type, meta) 
+         DO UPDATE SET 
+         last_used = excluded.last_used,
+         display_name = excluded.display_name`,
+        [
+          displayName,
+          connection.meta,
+          connection.type,
+          Math.floor(new Date().getTime()),
+        ],
+      );
+      
+      // Limit the number of recent connections to 10
+      await db.executeQuery(`
+        DELETE FROM recent_connections 
+        WHERE rowid NOT IN (
+          SELECT rowid FROM recent_connections
+          ORDER BY last_used DESC
+          LIMIT 10
+        )
+      `);
+      
+      // Reload connections
+      await loadRecentConnections();
+    } catch (err) {
+      console.error("Error tracking recent connection:", err);
+    }
+  }
+
+  // Load recent connections from app database
+  async function loadRecentConnections() {
+    const db = appDb();
+    if (!db) return;
+
+    try {
+      console.log("Attempting to load connections...");
+
+      // Load saved connections
+      const savedResult = await db.executeQuery(`
+        SELECT display_name, meta, type, last_used 
+        FROM connections
+        ORDER BY last_used DESC
+        LIMIT 10
+      `);
+
+      console.log(`Found ${savedResult.rows.length} saved connections in the database`);
+
+      // Map the results to ConnectionHistory objects
+      const savedConns: ConnectionHistory[] = savedResult.rows.map((row) => {
+        const displayName = row[0] as string;
+        const metaStr = row[1] as string;
+        const type = row[2] as "sqlite" | "libsql";
+        const lastAccessed = Number(row[3]);
+
+        try {
+          const meta = JSON.parse(metaStr);
+
+          return {
+            name: type === "sqlite" ? meta.path : meta.url,
+            type,
+            meta: metaStr,
+            lastAccessed,
+            saved: true
+          };
+        } catch (e) {
+          console.error("Error parsing connection meta:", e);
+          return {
+            name: displayName,
+            type,
+            meta: metaStr,
+            lastAccessed,
+            saved: true
+          };
+        }
+      });
+
+      setSavedConnections(savedConns);
+      
+      // Load actual recent connections from the recent_connections table
+      const recentResult = await db.executeQuery(`
+        SELECT display_name, meta, type, last_used 
+        FROM recent_connections
+        ORDER BY last_used DESC
+        LIMIT 5
+      `);
+      
+      console.log(`Found ${recentResult.rows.length} recent connections in the database`);
+      
+      // Map the results to ConnectionHistory objects
+      const recentConns: ConnectionHistory[] = recentResult.rows.map((row) => {
+        const displayName = row[0] as string;
+        const metaStr = row[1] as string;
+        const type = row[2] as "sqlite" | "libsql";
+        const lastAccessed = Number(row[3]);
+
+        try {
+          const meta = JSON.parse(metaStr);
+
+          return {
+            name: type === "sqlite" ? meta.path : meta.url,
+            type,
+            meta: metaStr,
+            lastAccessed,
+            saved: false
+          };
+        } catch (e) {
+          console.error("Error parsing connection meta:", e);
+          return {
+            name: displayName,
+            type,
+            meta: metaStr,
+            lastAccessed,
+            saved: false
+          };
+        }
+      });
+      
+      // If we don't have any recent connections yet, use the most recently accessed saved connections
+      if (recentConns.length === 0 && savedConns.length > 0) {
+        const tempRecentConns = [...savedConns]
+          .sort((a, b) => b.lastAccessed - a.lastAccessed)
+          .slice(0, 5);
+        
+        setRecentConnections(tempRecentConns);
+      } else {
+        setRecentConnections(recentConns);
+      }
+    } catch (err) {
+      console.error("Error loading connections:", err);
     }
   }
 
@@ -565,61 +741,8 @@ function App() {
     setShowSettings(!showSettings());
   }
 
-  // Load recent connections from app database
-  async function loadRecentConnections() {
-    const db = appDb();
-    if (!db) return;
-
-    try {
-      console.log("Attempting to load recent connections...");
-
-      const result = await db.executeQuery(`
-        SELECT display_name, meta, type, last_used
-        FROM connections
-        ORDER BY last_used DESC
-        LIMIT 10
-      `);
-
-      console.log(`Found ${result.rows.length} connections in the database`);
-
-      // Map the results to ConnectionHistory objects
-      const connections: ConnectionHistory[] = result.rows.map((row) => {
-        const displayName = row[0] as string;
-        const metaStr = row[1] as string;
-        const type = row[2] as "sqlite" | "libsql";
-        const lastAccessed = Number(row[3]);
-
-        console.log(
-          `Connection: ${displayName}, type: ${type}, meta: ${metaStr}`,
-        );
-
-        try {
-          const meta = JSON.parse(metaStr);
-
-          return {
-            name: type === "sqlite" ? meta.path : meta.url,
-            type,
-            meta: metaStr,
-            lastAccessed,
-          };
-        } catch (err) {
-          console.error(
-            `Error parsing meta JSON for connection ${displayName}:`,
-            err,
-          );
-          return null;
-        }
-      }).filter(Boolean) as ConnectionHistory[];
-
-      console.log(`Loaded ${connections.length} valid connections`);
-      setRecentConnections(connections);
-    } catch (err) {
-      console.error("Error loading recent connections:", err);
-    }
-  }
-
   // Connect to database
-  async function connectToDatabase() {
+  async function connectToDatabase(options?: { saveOnly?: boolean }) {
     setLoading(true);
     setError("");
     try {
@@ -660,6 +783,71 @@ function App() {
         }
       }
 
+      // Save to connections table (saved connections) with proper meta data
+      const name = connectionType() === "sqlite" ? dbPath() : libsqlUrl();
+      const displayName = connectionType() === "sqlite"
+        ? name.split("/").pop() || name
+        : new URL(name).hostname;
+      const meta = connectionType() === "sqlite"
+        ? JSON.stringify({ path: dbPath() })
+        : JSON.stringify({
+          url: libsqlUrl(),
+          authToken: authToken() || null,
+        });
+
+      console.log(
+        `Saving connection: ${displayName}, type: ${connectionType()}, meta: ${meta}`,
+      );
+
+      // Insert or update saved connection
+      const db = appDb();
+      if (db) {
+        console.log("App DB available, saving connection to history");
+        await db.executeQuery(
+          `INSERT INTO connections (display_name, meta, type, last_used)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(type, meta) 
+           DO UPDATE SET 
+           last_used = excluded.last_used,
+           display_name = excluded.display_name`,
+          [
+            displayName,
+            meta,
+            connectionType(),
+            Math.floor(new Date().getTime()),
+          ],
+        );
+
+        // Also track this as a recent connection
+        await db.executeQuery(
+          `INSERT INTO recent_connections (display_name, meta, type, last_used)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(type, meta) 
+           DO UPDATE SET 
+           last_used = excluded.last_used,
+           display_name = excluded.display_name`,
+          [
+            displayName,
+            meta,
+            connectionType(),
+            Math.floor(new Date().getTime()),
+          ],
+        );
+
+        // Reload connections
+        await loadRecentConnections();
+      } else {
+        console.error(
+          "App DB not available, cannot save connection to history",
+        );
+      }
+
+      // If this is just a save operation, don't connect to the database
+      if (options?.saveOnly) {
+        setLoading(false);
+        return;
+      }
+
       // Create and connect to the database
       const client = createDatabaseClient({
         type: connectionType(),
@@ -684,49 +872,6 @@ function App() {
 
       setConnected(true);
       setShowConnectionDialog(false);
-
-      // Save to connection history with proper meta data
-      const name = connectionType() === "sqlite" ? dbPath() : libsqlUrl();
-      const displayName = connectionType() === "sqlite"
-        ? name.split("/").pop() || name
-        : new URL(name).hostname;
-      const meta = connectionType() === "sqlite"
-        ? JSON.stringify({ path: dbPath() })
-        : JSON.stringify({
-          url: libsqlUrl(),
-          authToken: authToken() || null,
-        });
-
-      console.log(
-        `Saving connection: ${displayName}, type: ${connectionType()}, meta: ${meta}`,
-      );
-
-      // Insert or update connection
-      const db = appDb();
-      if (db) {
-        console.log("App DB available, saving connection to history");
-        await db.executeQuery(
-          `INSERT INTO connections (display_name, meta, type, last_used)
-           VALUES (?, ?, ?, ?)
-           ON CONFLICT(type, meta) 
-           DO UPDATE SET 
-           last_used = excluded.last_used,
-           display_name = excluded.display_name`,
-          [
-            displayName,
-            meta,
-            connectionType(),
-            Math.floor(new Date().getTime()),
-          ],
-        );
-
-        // Reload connections
-        await loadRecentConnections();
-      } else {
-        console.error(
-          "App DB not available, cannot save connection to history",
-        );
-      }
 
       // Focus on the table list after successful connection
       setTimeout(() => {
@@ -753,7 +898,7 @@ function App() {
   }
 
   // Handle recent connection selection
-  function handleRecentConnectionSelect(connection: ConnectionHistory) {
+  async function handleRecentConnectionSelect(connection: ConnectionHistory) {
     setConnectionType(connection.type);
     if (connection.type === "sqlite") {
       const meta = JSON.parse(connection.meta);
@@ -763,7 +908,75 @@ function App() {
       setLibsqlUrl(meta.url);
       setAuthToken(meta.authToken || "");
     }
+    
+    // Update the lastAccessed timestamp in the connections table if it's a saved connection
+    const db = appDb();
+    if (db && connection.saved) {
+      try {
+        await db.executeQuery(
+          `UPDATE connections 
+           SET last_used = ? 
+           WHERE type = ? AND meta = ?`,
+          [Math.floor(new Date().getTime()), connection.type, connection.meta]
+        );
+      } catch (err) {
+        console.error("Error updating connection timestamp:", err);
+      }
+    }
+    
+    // Always track this as a recent connection
+    await trackRecentConnection(connection);
+    
+    // Connect to the database
     connectToDatabase();
+  }
+
+  // Handle connection removal
+  async function handleRemoveConnection(connection: ConnectionHistory) {
+    const db = appDb();
+    if (!db) return;
+
+    try {
+      // Delete the connection from database
+      await db.executeQuery(
+        `DELETE FROM connections 
+         WHERE type = ? AND meta = ?`,
+        [connection.type, connection.meta]
+      );
+
+      // Reload connections
+      await loadRecentConnections();
+    } catch (err) {
+      console.error("Error removing connection:", err);
+      setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // Handle connection edit
+  async function handleEditConnection(connection: ConnectionHistory) {
+    // Parse the meta to pre-fill the form
+    setConnectionType(connection.type);
+    if (connection.type === "sqlite") {
+      const meta = JSON.parse(connection.meta);
+      setDbPath(meta.path);
+    } else {
+      const meta = JSON.parse(connection.meta);
+      setLibsqlUrl(meta.url);
+      setAuthToken(meta.authToken || "");
+    }
+    
+    // Set editing mode
+    setIsEditing(true);
+    
+    // Open the connection dialog with the form visible
+    setShowConnectionDialog(true);
+    
+    // Wait for the dialog to be rendered before showing the form
+    setTimeout(() => {
+      if (typeof window !== "undefined") {
+        (window as any).showConnectionForm?.(true);
+      }
+    }, 100);
   }
 
   // Execute SQL query
@@ -886,20 +1099,10 @@ function App() {
 
   // Toggle connection dialog
   function toggleConnectionDialog() {
-    // Set the latest values if already connected
-    if (connected()) {
-      const client = dbClient();
-      if (client && client.config) {
-        setConnectionType(client.config.type);
-        if (client.config.type === "sqlite" && client.config.path) {
-          setDbPath(client.config.path);
-        } else if (client.config.type === "libsql" && client.config.url) {
-          setLibsqlUrl(client.config.url);
-          setAuthToken(client.config.authToken || "");
-        }
-      }
+    if (showConnectionDialog()) {
+      // Reset editing state when closing the dialog
+      setIsEditing(false);
     }
-
     setShowConnectionDialog(!showConnectionDialog());
   }
 
@@ -1028,87 +1231,15 @@ function App() {
                 {/* Recent connections */}
                 <Show when={recentConnections().length > 0}>
                   <div class="mt-8">
-                    <h3 class="text-lg font-medium mb-3">Recent Connections</h3>
-                    <div
-                      class={`border ${
-                        themeColors[settings().theme].border
-                      } rounded-md overflow-hidden w-full`}
-                    >
-                      <ul
-                        class={`divide-y ${
-                          themeColors[settings().theme].divider
-                        }`}
-                      >
-                        <For each={recentConnections()}>
-                          {(connection: ConnectionHistory, index) => {
-                            console.log("Rendering connection:", connection);
-
-                            // Helper functions for display
-                            const getDisplayName = () => {
-                              try {
-                                return connection.type === "sqlite"
-                                  ? connection.name.split("/").pop() ||
-                                    connection.name
-                                  : new URL(connection.name).hostname;
-                              } catch (err) {
-                                console.error(
-                                  "Error parsing connection name:",
-                                  err,
-                                );
-                                return "Unknown";
-                              }
-                            };
-
-                            return (
-                              <li>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleRecentConnectionSelect(connection)}
-                                  class={`w-full text-left px-4 py-3 ${
-                                    themeColors[settings().theme].hover
-                                  } flex items-center gap-3`}
-                                >
-                                  <div class={`flex items-center justify-center h-6 w-6 rounded-full ${themeColors[settings().theme].buttonBg} text-sm font-medium flex-shrink-0`}>
-                                    {index() + 1}
-                                  </div>
-                                  <div class="flex-1">
-                                    <div
-                                      class={`font-medium ${
-                                        themeColors[settings().theme].headerText
-                                      }`}
-                                    >
-                                      {getDisplayName()}
-                                    </div>
-                                    <div
-                                      class={`text-sm ${
-                                        themeColors[settings().theme].subText
-                                      } break-all`}
-                                    >
-                                      {connection.name}
-                                    </div>
-                                    <div class={`flex items-center justify-between mt-1`}>
-                                      <div
-                                        class={`text-xs ${
-                                          themeColors[settings().theme].subText
-                                        }`}
-                                      >
-                                        {connection.type === "sqlite"
-                                          ? "SQLite"
-                                          : "LibSQL"}
-                                      </div>
-                                      <div class={`text-xs ${themeColors[settings().theme].subText} italic`}>
-                                        Ctrl+{index() + 1}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </button>
-                              </li>
-                            );
-                          }}
-                        </For>
-                      </ul>
-                    </div>
+                    <h3 class="text-lg font-medium mb-4">Recent Connections</h3>
+                    <RecentConnections
+                      connections={recentConnections()}
+                      onSelect={handleRecentConnectionSelect}
+                      onRemove={handleRemoveConnection}
+                      onEdit={handleEditConnection}
+                      theme={settings().theme}
+                      showKeyboardShortcuts={true}
+                    />
                   </div>
                 </Show>
               </div>
@@ -1165,11 +1296,18 @@ function App() {
         onConnect={connectToDatabase}
         isLoading={loading()}
         isConnected={connected()}
+        isEditing={isEditing()}
         theme={settings().theme}
+        savedConnections={savedConnections()}
         recentConnections={recentConnections()}
         onSelectRecent={handleRecentConnectionSelect}
+        onRemoveConnection={handleRemoveConnection}
+        onEditConnection={handleEditConnection}
         isOpen={showConnectionDialog()}
-        onClose={() => setShowConnectionDialog(false)}
+        onClose={() => {
+          setShowConnectionDialog(false);
+          setIsEditing(false);
+        }}
       />
 
       {/* Settings Menu */}
