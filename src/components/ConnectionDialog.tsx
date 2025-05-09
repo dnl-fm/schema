@@ -1,4 +1,4 @@
-import { Show, createSignal, onMount } from "solid-js";
+import { Show, createSignal, onMount, createEffect } from "solid-js";
 import { ConnectionHistory } from "../types.ts";
 import RecentConnections from "./RecentConnections.tsx";
 import { open } from '@tauri-apps/plugin-dialog';
@@ -38,6 +38,7 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
   const [testResult, setTestResult] = createSignal<{success: boolean; message: string} | null>(null);
   const [showConnectionForm, setShowConnectionForm] = createSignal(false);
   const [saveSuccess, setSaveSuccess] = createSignal(false);
+  const [connectionColor, setConnectionColor] = createSignal<string>("#000000");
 
   // Expose a function to show/hide the connection form from outside
   onMount(() => {
@@ -104,36 +105,28 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
   };
 
   // Validate form before connecting
-  const handleConnect = (saveOnly = false) => {
-    // Validate form inputs based on connection type
-    if (props.connectionType === 'sqlite') {
-      if (!validateSQLiteForm()) return;
-    } else {
-      if (!validateLibSQLForm()) return;
+  const handleConnect = (saveOnly?: boolean) => {
+    let formErrors = validateForm();
+    
+    // If there are form errors, display them and abort
+    if (Object.keys(formErrors).length > 0) {
+      setFormErrors(formErrors);
+      return;
     }
     
-    // Connect to database, which also saves the connection
-    if (typeof props.onConnect === 'function') {
-      // Pass the saveOnly option to tell connect function whether to actually connect or just save
-      props.onConnect({ saveOnly });
-    }
+    // Prepare options object with the color
+    const options = {
+      saveOnly,
+      color: connectionColor()
+    };
     
-    // Always close the form
-    setShowConnectionForm(false);
+    // Call the parent onConnect function with the options
+    props.onConnect(options);
     
-    // If it was just a save operation, show success message and trigger refresh
-    if (saveOnly) {
-      // Show success message
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-      
-      // Manually trigger a reload of the connections after a short delay
-      setTimeout(() => {
-        if (typeof (window as any).reloadConnections === 'function') {
-          (window as any).reloadConnections();
-        }
-      }, 100);
-    }
+    // Hide the connection form and clear errors
+    setFormErrors({});
+    setSaveSuccess(false);
+    setTestResult(null);
   };
   
   // Validate SQLite form
@@ -175,6 +168,32 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
     return Object.keys(errors).length === 0;
   };
   
+  // Validate form for both connection types
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (props.connectionType === 'sqlite') {
+      // Check if SQLite path is provided
+      if (!props.dbPath.trim()) {
+        errors.dbPath = 'Database path is required';
+      }
+    } else {
+      // Check if LibSQL URL is provided
+      if (!props.libsqlUrl.trim()) {
+        errors.libsqlUrl = 'Database URL is required';
+      } else {
+        // Validate URL format
+        try {
+          new URL(props.libsqlUrl);
+        } catch (e) {
+          errors.libsqlUrl = 'Invalid URL format';
+        }
+      }
+    }
+    
+    return errors;
+  };
+
   // Get button color based on theme
   const getButtonClasses = (isPrimary = true) => {
     if (isPrimary) {
@@ -192,6 +211,18 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
       setTestResult(null);
     }
   };
+
+  // When showing the connection form, set a default color based on connection type
+  createEffect(() => {
+    if (showConnectionForm()) {
+      // Set a default color based on connection type
+      if (props.connectionType === 'sqlite') {
+        setConnectionColor('#0d9488'); // Teal for SQLite
+      } else {
+        setConnectionColor('#3b82f6'); // Blue for LibSQL
+      }
+    }
+  });
 
   return (
     <Show when={props.isOpen}>
@@ -418,6 +449,56 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
                   </div>
                 </Show>
 
+                {/* Color Picker */}
+                <div>
+                  <label class={`block text-base font-medium ${themeColors[props.theme].headerText} mb-2`}>
+                    Connection Color
+                  </label>
+                  <div class="flex items-center gap-4">
+                    <input
+                      type="color"
+                      value={connectionColor()}
+                      onChange={(e) => setConnectionColor(e.currentTarget.value)}
+                      class="w-12 h-12 rounded cursor-pointer"
+                    />
+                    <div class="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => setConnectionColor('#0d9488')} 
+                        class="w-8 h-8 rounded-full bg-teal-600 border-2 border-white"
+                        title="SQLite (Teal)"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setConnectionColor('#3b82f6')} 
+                        class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white"
+                        title="LibSQL (Blue)"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setConnectionColor('#8b5cf6')} 
+                        class="w-8 h-8 rounded-full bg-purple-500 border-2 border-white"
+                        title="Purple"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setConnectionColor('#ef4444')} 
+                        class="w-8 h-8 rounded-full bg-red-500 border-2 border-white"
+                        title="Red"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setConnectionColor('#f59e0b')} 
+                        class="w-8 h-8 rounded-full bg-amber-500 border-2 border-white"
+                        title="Amber"
+                      />
+                    </div>
+                  </div>
+                  <div class={`text-sm ${themeColors[props.theme].subText} mt-1`}>
+                    This color will be used for the connection indicator
+                  </div>
+                </div>
+
                 {/* Save and Connect buttons */}
                 <div class="flex justify-end pt-4 gap-3">
                   <button
@@ -429,19 +510,17 @@ export const ConnectionDialog = (props: ConnectionDialogProps) => {
                     {props.isLoading ? "Saving..." : "Save"}
                   </button>
                   <button
-                    onClick={() => handleConnect(false)}
+                    onClick={() => handleConnect()}
                     disabled={props.isLoading}
-                    class={getButtonClasses(true)}
+                    class={`${getButtonClasses(true)} hover:bg-gray-600 dark:hover:bg-gray-700`}
                     title="Connect to database"
                   >
                     {props.isLoading ? (
-                      <span class="flex items-center">
-                        <span class="material-icons animate-spin mr-2 text-sm">refresh</span>
-                        Connecting...
-                      </span>
+                      <span class="animate-spin material-icons text-sm">refresh</span>
                     ) : (
-                      "Connect"
+                      <span class="material-icons text-sm">lan</span>
                     )}
+                    {props.isLoading ? "Connecting..." : "Connect"}
                   </button>
                 </div>
               </div>

@@ -12,6 +12,7 @@ export interface DatabaseConfig {
   path?: string;  // For SQLite
   url?: string;   // For LibSQL
   authToken?: string; // For LibSQL
+  color?: string; // Custom color for the connection indicator
 }
 
 export interface QueryResult {
@@ -27,6 +28,7 @@ export interface ConnectionHistory {
   meta: string;  // JSON string containing type-specific properties
   lastAccessed: number;
   saved?: boolean; // Flag indicating if this is a saved connection
+  color?: string; // Custom color for the connection
 }
 
 export interface AppSettings {
@@ -83,7 +85,7 @@ export interface ConnectionDialogProps {
   onAuthTokenChange: (token: string) => void;
   connectionType: DatabaseType;
   onConnectionTypeChange: (type: DatabaseType) => void;
-  onConnect: (options?: { saveOnly?: boolean }) => void;
+  onConnect: (options?: { saveOnly?: boolean; color?: string }) => void;
   isLoading: boolean;
   isConnected: boolean;
   isEditing?: boolean;

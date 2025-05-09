@@ -10,6 +10,7 @@ export interface DatabaseConfig {
   path?: string;  // For SQLite
   url?: string;   // For LibSQL
   authToken?: string; // For LibSQL
+  color?: string; // Custom color for the connection indicator
 }
 
 export interface DatabaseClient {

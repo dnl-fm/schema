@@ -35,10 +35,14 @@ The app is configured with GitHub Actions for automatic releases. To create a ne
 
 This will trigger the GitHub Actions workflow that:
 - Builds installers for Windows, macOS, and Linux
-- Creates a draft GitHub release with all installation files
+- Creates a GitHub release with all installation files automatically attached
 - Generates release notes
+- Publishes the release automatically
 
-After the workflow completes, review the draft release on GitHub and publish it when ready.
+The workflow will build and attach the following files to the release:
+- Windows: `.msi` and `.exe` installers
+- macOS: `.dmg` installer and `.app` bundle
+- Linux: `.deb` package and `.AppImage` file
 
 ## Manual Release
 

@@ -1,5 +1,5 @@
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
-import { AppSettings, ConnectionHistory, QueryResult } from "./types.ts";
+import { AppSettings, ConnectionHistory, QueryResult, DatabaseConfig } from "./types.ts";
 import { ThemeMode } from "./types/theme.ts";
 import TableSidebar from "./components/TableSidebar.tsx";
 import TablesList from "./components/TablesList.tsx";
@@ -12,6 +12,8 @@ import HelpDialog from "./components/HelpDialog.tsx";
 import { themeColors } from "./utils/theme.ts";
 import { createDatabaseClient, type DatabaseClient } from "./lib/database.ts";
 import { RecentConnections } from "./components/RecentConnections.tsx";
+import AppHeader from "./components/AppHeader.tsx";
+import ActiveConnectionIndicator from "./components/ActiveConnectionIndicator.tsx";
 
 type ActiveElement = "query-editor" | "results-table" | "tables-list" | null;
 
@@ -477,65 +479,51 @@ function App() {
   // Initialize application database
   async function initAppDb() {
     try {
-      console.log("Initializing application database...");
+      console.log("Initializing app database...");
       
-      // Import database library dynamically
-      const { createDatabaseClient } = await import("./lib/database.ts");
-      
-      // Create SQLite client for app settings
-      const appSettingsDbPath = await getAppSettingsDbPath();
-      console.log(`App settings DB path: ${appSettingsDbPath}`);
-      
+      // Connect to SQLite database for app settings
       const client = createDatabaseClient({
         type: "sqlite",
-        path: appSettingsDbPath,
+        path: "settings.db",
       });
       
+      // Make sure to connect before executing queries
       await client.connect();
-      console.log("Connected to app settings database");
+      console.log("Connected to settings database");
+      
+      setAppDb(client);
       
       // Create settings table if it doesn't exist
       await client.executeQuery(`
         CREATE TABLE IF NOT EXISTS settings (
           key TEXT PRIMARY KEY,
-          value TEXT NOT NULL
+          value TEXT
         )
       `);
       
-      // Create connections table if it doesn't exist (saved connections)
+      // Create connections table if it doesn't exist
       await client.executeQuery(`
         CREATE TABLE IF NOT EXISTS connections (
-          display_name TEXT NOT NULL,
-          meta TEXT NOT NULL,
-          type TEXT NOT NULL,
-          last_used INTEGER NOT NULL,
+          display_name TEXT,
+          meta TEXT,
+          type TEXT,
+          last_used INTEGER,
+          color TEXT,
           PRIMARY KEY (type, meta)
         )
       `);
       
-      // Create recent connections table if it doesn't exist
+      // Create recent_connections table to track actual usage
       await client.executeQuery(`
         CREATE TABLE IF NOT EXISTS recent_connections (
-          display_name TEXT NOT NULL,
-          meta TEXT NOT NULL,
-          type TEXT NOT NULL,
-          last_used INTEGER NOT NULL,
+          display_name TEXT,
+          meta TEXT,
+          type TEXT,
+          last_used INTEGER,
+          color TEXT,
           PRIMARY KEY (type, meta)
         )
       `);
-      
-      // Set the database client
-      setAppDb(client);
-      
-      // Make database and functions available in the global object for ConnectionDialog
-      if (typeof window !== "undefined") {
-        console.log("Exposing app database and reload functions to window");
-        (window as any).appDbInstance = () => appDb();
-        (window as any).reloadConnections = async () => {
-          console.log("Global reloadConnections called");
-          return loadRecentConnections();
-        };
-      }
       
       // Load settings and connections
       await loadSettings();
@@ -561,17 +549,19 @@ function App() {
         
       // Update or insert into recent_connections table
       await db.executeQuery(
-        `INSERT INTO recent_connections (display_name, meta, type, last_used)
-         VALUES (?, ?, ?, ?)
+        `INSERT INTO recent_connections (display_name, meta, type, last_used, color)
+         VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(type, meta) 
          DO UPDATE SET 
          last_used = excluded.last_used,
-         display_name = excluded.display_name`,
+         display_name = excluded.display_name,
+         color = excluded.color`,
         [
           displayName,
           connection.meta,
           connection.type,
           Math.floor(new Date().getTime()),
+          connection.color || null,
         ],
       );
       
@@ -602,7 +592,7 @@ function App() {
 
       // Load saved connections
       const savedResult = await db.executeQuery(`
-        SELECT display_name, meta, type, last_used 
+        SELECT display_name, meta, type, last_used, color 
         FROM connections
         ORDER BY last_used DESC
         LIMIT 10
@@ -616,6 +606,7 @@ function App() {
         const metaStr = row[1] as string;
         const type = row[2] as "sqlite" | "libsql";
         const lastAccessed = Number(row[3]);
+        const color = row[4] as string | undefined;
 
         try {
           const meta = JSON.parse(metaStr);
@@ -625,7 +616,8 @@ function App() {
             type,
             meta: metaStr,
             lastAccessed,
-            saved: true
+            saved: true,
+            color
           };
         } catch (e) {
           console.error("Error parsing connection meta:", e);
@@ -634,7 +626,8 @@ function App() {
             type,
             meta: metaStr,
             lastAccessed,
-            saved: true
+            saved: true,
+            color
           };
         }
       });
@@ -643,7 +636,7 @@ function App() {
       
       // Load actual recent connections from the recent_connections table
       const recentResult = await db.executeQuery(`
-        SELECT display_name, meta, type, last_used 
+        SELECT display_name, meta, type, last_used, color 
         FROM recent_connections
         ORDER BY last_used DESC
         LIMIT 5
@@ -657,6 +650,7 @@ function App() {
         const metaStr = row[1] as string;
         const type = row[2] as "sqlite" | "libsql";
         const lastAccessed = Number(row[3]);
+        const color = row[4] as string | undefined;
 
         try {
           const meta = JSON.parse(metaStr);
@@ -666,7 +660,8 @@ function App() {
             type,
             meta: metaStr,
             lastAccessed,
-            saved: false
+            saved: false,
+            color
           };
         } catch (e) {
           console.error("Error parsing connection meta:", e);
@@ -675,7 +670,8 @@ function App() {
             type,
             meta: metaStr,
             lastAccessed,
-            saved: false
+            saved: false,
+            color
           };
         }
       });
@@ -741,110 +737,119 @@ function App() {
     setShowSettings(!showSettings());
   }
 
-  // Connect to database
-  async function connectToDatabase(options?: { saveOnly?: boolean }) {
-    setLoading(true);
-    setError("");
+  // Connect to database with options
+  async function connectToDatabase(options?: { saveOnly?: boolean; color?: string }) {
+    const saveOnly = options?.saveOnly || false;
+    const color = options?.color || "";
+    
+    // Reset error state
+    setError(null);
+    
+    if (!saveOnly) {
+      setLoading(true);
+    }
+    
     try {
-      console.log(`Connecting to ${connectionType()} database...`);
-      console.log(
-        `Settings: ${
-          connectionType() === "sqlite"
-            ? `Path: ${dbPath()}`
-            : `URL: ${libsqlUrl()}, AuthToken: ${authToken() ? "***" : "none"}`
-        }`,
-      );
-
-      // Validate input parameters
-      if (connectionType() === "sqlite" && !dbPath().trim()) {
-        throw new Error("Please enter a valid SQLite database path");
-      }
-
-      if (connectionType() === "libsql") {
-        if (!libsqlUrl().trim()) {
-          throw new Error("Please enter a valid LibSQL URL");
+      // Validate connection parameters
+      if (connectionType() === "sqlite") {
+        if (!dbPath()) {
+          throw new Error("SQLite database path is required");
         }
-
-        // Validate URL format for LibSQL
-        try {
-          new URL(libsqlUrl());
-        } catch (e) {
-          throw new Error(
-            "Please enter a valid URL format (e.g., https://example.turso.io)",
+      } else {
+        if (!libsqlUrl()) {
+          throw new Error("LibSQL URL is required");
+        }
+      }
+      
+      const config: DatabaseConfig = {
+        type: connectionType(),
+        color: color,
+      };
+      
+      if (connectionType() === "sqlite") {
+        config.path = dbPath();
+      } else {
+        config.url = libsqlUrl();
+        config.authToken = authToken();
+      }
+      
+      // Create connection meta
+      const meta = JSON.stringify(
+        connectionType() === "sqlite"
+          ? { path: dbPath() }
+          : { url: libsqlUrl(), authToken: authToken() }
+      );
+      
+      // Save display name for the connection
+      const displayName =
+        connectionType() === "sqlite"
+          ? dbPath().split("/").pop() || dbPath()
+          : new URL(libsqlUrl()).hostname;
+      
+      // If we're just saving, we just need to insert into the database and reload connections
+      if (saveOnly) {
+        const db = appDb();
+        if (!db) {
+          throw new Error("App database not initialized");
+        }
+        
+        if (isEditing()) {
+          // Update existing connection
+          const currentMeta = 
+            connectionType() === "sqlite" 
+              ? JSON.stringify({ path: dbPath() }) 
+              : JSON.stringify({ url: libsqlUrl(), authToken: authToken() });
+            
+          await db.executeQuery(
+            `UPDATE connections 
+             SET display_name = ?, meta = ?, type = ?, last_used = ?, color = ?
+             WHERE type = ? AND meta = ?`,
+            [
+              displayName,
+              meta,
+              connectionType(),
+              Math.floor(new Date().getTime()),
+              color,
+              connectionType(),
+              currentMeta
+            ]
+          );
+        } else {
+          // Insert new connection
+          await db.executeQuery(
+            `INSERT INTO connections (display_name, meta, type, last_used, color)
+             VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT(type, meta) 
+             DO UPDATE SET 
+             last_used = excluded.last_used,
+             display_name = excluded.display_name,
+             color = excluded.color`,
+            [
+              displayName,
+              meta,
+              connectionType(),
+              Math.floor(new Date().getTime()),
+              color,
+            ]
           );
         }
-
-        // Auth token required for remote LibSQL databases
-        if (
-          !libsqlUrl().includes("localhost") &&
-          !libsqlUrl().includes("127.0.0.1") && !authToken().trim()
-        ) {
-          throw new Error("Auth token is required for remote LibSQL databases");
-        }
-      }
-
-      // Save to connections table (saved connections) with proper meta data
-      const name = connectionType() === "sqlite" ? dbPath() : libsqlUrl();
-      const displayName = connectionType() === "sqlite"
-        ? name.split("/").pop() || name
-        : new URL(name).hostname;
-      const meta = connectionType() === "sqlite"
-        ? JSON.stringify({ path: dbPath() })
-        : JSON.stringify({
-          url: libsqlUrl(),
-          authToken: authToken() || null,
+        
+        // Also track as recent
+        trackRecentConnection({
+          name: connectionType() === "sqlite" ? dbPath() : libsqlUrl(),
+          type: connectionType(),
+          meta,
+          lastAccessed: Math.floor(new Date().getTime()),
+          saved: true,
+          color
         });
-
-      console.log(
-        `Saving connection: ${displayName}, type: ${connectionType()}, meta: ${meta}`,
-      );
-
-      // Insert or update saved connection
-      const db = appDb();
-      if (db) {
-        console.log("App DB available, saving connection to history");
-        await db.executeQuery(
-          `INSERT INTO connections (display_name, meta, type, last_used)
-           VALUES (?, ?, ?, ?)
-           ON CONFLICT(type, meta) 
-           DO UPDATE SET 
-           last_used = excluded.last_used,
-           display_name = excluded.display_name`,
-          [
-            displayName,
-            meta,
-            connectionType(),
-            Math.floor(new Date().getTime()),
-          ],
-        );
-
-        // Also track this as a recent connection
-        await db.executeQuery(
-          `INSERT INTO recent_connections (display_name, meta, type, last_used)
-           VALUES (?, ?, ?, ?)
-           ON CONFLICT(type, meta) 
-           DO UPDATE SET 
-           last_used = excluded.last_used,
-           display_name = excluded.display_name`,
-          [
-            displayName,
-            meta,
-            connectionType(),
-            Math.floor(new Date().getTime()),
-          ],
-        );
-
-        // Reload connections
-        await loadRecentConnections();
-      } else {
-        console.error(
-          "App DB not available, cannot save connection to history",
-        );
-      }
-
-      // If this is just a save operation, don't connect to the database
-      if (options?.saveOnly) {
-        setLoading(false);
+        
+        // Reload the connections
+        loadRecentConnections();
+        
+        // Reset editing mode
+        setIsEditing(false);
+            
         return;
       }
 
@@ -1157,8 +1162,8 @@ function App() {
         </div>
       </Show>
 
-      {/* Main content area */}
-      <div class="flex-1 flex overflow-hidden">
+      {/* Main content area - adjust height to account for connection bar */}
+      <div class={`flex-1 flex overflow-hidden ${connected() ? 'mb-10' : ''} relative z-10`}>
         {/* Main navigation sidebar */}
         <TableSidebar
           tables={tables()}
@@ -1324,6 +1329,26 @@ function App() {
         onClose={() => setShowHelpDialog(false)}
         theme={settings().theme}
       />
+
+      {/* Active Connection Indicator (background bar) */}
+      <Show when={connected()}>
+        <div class="fixed bottom-0 left-0 right-0 z-0">
+          <ActiveConnectionIndicator 
+            connectionName={
+              connectionType() === "sqlite" 
+                ? dbPath() 
+                : libsqlUrl()
+            }
+            connectionType={connectionType()}
+            theme={settings().theme}
+            onClick={toggleConnectionDialog}
+            color={
+              dbClient()?.config?.color || 
+              (connectionType() === "sqlite" ? "#0d9488" : "#3b82f6")
+            }
+          />
+        </div>
+      </Show>
     </div>
   );
 }
