@@ -15,7 +15,7 @@ If you're developing on Linux, you'll need to install the following dependencies
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev
+sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
 ```
 
 ## Development Commands
@@ -43,14 +43,12 @@ The app is configured with GitHub Actions for automatic releases. To create a ne
 4. Push with tags: `git push && git push --tags`
 
 This will trigger the GitHub Actions workflow that:
-- Builds installers for Windows, macOS, and Linux
+- Builds installers for Linux only (Windows and macOS builds are currently disabled)
 - Creates a GitHub release with all installation files automatically attached
 - Generates release notes
 - Publishes the release automatically
 
 The workflow will build and attach the following files to the release:
-- Windows: `.msi` and `.exe` installers
-- macOS: `.dmg` installer and `.app` bundle
 - Linux: `.deb` package and `.AppImage` file
 
 ## Manual Release

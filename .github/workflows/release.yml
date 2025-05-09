@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-22.04, windows-latest]
+        platform: [ubuntu-22.04]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -29,22 +29,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies (Ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
 
-      - name: Clean previous dependencies (Unix)
-        if: matrix.platform != 'windows-latest'
+      - name: Clean previous dependencies
         run: |
           rm -rf node_modules
           rm -f deno.lock
-
-      - name: Clean previous dependencies (Windows)
-        if: matrix.platform == 'windows-latest'
-        run: |
-          if (Test-Path -Path "node_modules") { Remove-Item -Path "node_modules" -Recurse -Force }
-          if (Test-Path -Path "deno.lock") { Remove-Item -Path "deno.lock" -Force }
 
       - name: Install frontend dependencies
         run: |
@@ -76,12 +68,6 @@ jobs:
           files: |
             src-tauri/target/release/bundle/**/*.deb
             src-tauri/target/release/bundle/**/*.AppImage
-            src-tauri/target/release/bundle/**/*.dmg
-            src-tauri/target/release/bundle/**/*.app.tar.gz
-            src-tauri/target/release/bundle/**/*.app.zip
-            src-tauri/target/release/bundle/**/*.msi
-            src-tauri/target/release/bundle/**/*.exe
-            src-tauri/target/release/bundle/**/*.nsis.zip
           draft: false
           generate_release_notes: true
         env:
