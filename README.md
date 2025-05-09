@@ -9,6 +9,15 @@ This app provides a user-friendly interface for viewing database schemas, execut
 
 - [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
 
+### Linux Dependencies
+
+If you're developing on Linux, you'll need to install the following dependencies:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev
+```
+
 ## Development Commands
 
 ```bash
