@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-22.04]
+        platform: [ubuntu-22.04, macos-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +29,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
 
-      - name: Clean previous dependencies
+      - name: Clean previous dependencies (Unix)
+        if: matrix.platform != 'windows-latest'
         run: |
           rm -rf node_modules
           rm -f deno.lock
@@ -48,6 +50,14 @@ jobs:
         run: |
           deno task build
           deno task tauri build
+
+      - name: Package macOS app bundle
+        if: matrix.platform == 'macos-latest'
+        run: |
+          cd src-tauri/target/release/bundle/macos
+          zip -r Schema.app.zip Schema.app
+          echo "Created Schema.app.zip"
+          ls -la
 
       - name: List build files (Debug)
         run: |
@@ -68,6 +78,7 @@ jobs:
           files: |
             src-tauri/target/release/bundle/**/*.deb
             src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/macos/Schema.app.zip
           draft: false
           generate_release_notes: true
         env:
